@@ -4,11 +4,17 @@ Sakura pastel RPG — town, two wild routes, party battles, and ten floral creat
 
 ## Play
 
+**Live:** [https://pawsp7.github.io/NotPokemon/](https://pawsp7.github.io/NotPokemon/)
+
+Local:
+
 ```bash
 python3 -m http.server 8080
 ```
 
 Open [http://localhost:8080](http://localhost:8080).
+
+If the live page looks stale, hard-refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`).
 
 ## Controls
 
