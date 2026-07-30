@@ -4,7 +4,7 @@ const CREATURES = [
     id: "pyrokit",
     name: "Pyrokit",
     type: "Fire",
-    catchRate: 0.45,
+    catchRate: 0.55,
     description: "A fox-kit whose tail tip never cools. Prefers sunlit grass.",
     colors: {
       body: "#e07a3a",
@@ -19,7 +19,7 @@ const CREATURES = [
     id: "aquibble",
     name: "Aquibble",
     type: "Water",
-    catchRate: 0.5,
+    catchRate: 0.6,
     description: "A puddle-dweller that hops between dewdrops after rain.",
     colors: {
       body: "#4a9fd4",
@@ -34,7 +34,7 @@ const CREATURES = [
     id: "verdwing",
     name: "Verdwing",
     type: "Grass",
-    catchRate: 0.42,
+    catchRate: 0.52,
     description: "A leafy moth that fans soft pollen trails through meadows.",
     colors: {
       body: "#5cb85c",
@@ -49,7 +49,7 @@ const CREATURES = [
     id: "voltmite",
     name: "Voltmite",
     type: "Electric",
-    catchRate: 0.38,
+    catchRate: 0.48,
     description: "A beetle that stores static in its shell and crackles when startled.",
     colors: {
       body: "#f0d040",
@@ -64,7 +64,7 @@ const CREATURES = [
     id: "gravpaw",
     name: "Gravpaw",
     type: "Rock",
-    catchRate: 0.32,
+    catchRate: 0.42,
     description: "A stony cub whose paws leave tiny pebble prints on the path.",
     colors: {
       body: "#9a8570",

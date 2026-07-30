@@ -32,4 +32,4 @@ One route with tall grass, a path, trees, flowers, rocks, and a small pond.
 | Voltmite | Electric | Static beetle |
 | Gravpaw | Rock | Stony cub |
 
-Catch all five to complete the route. You start with 12 Catch Orbs.
+Catch all five to complete the route. You start with 20 Catch Orbs.

@@ -27,7 +27,7 @@
     mode: "title", // title | play | battle | dex | win
     player: { x: 2, y: 2, facing: "down", moving: false, px: 0, py: 0, tx: 0, ty: 0, t: 0, step: 0 },
     keys: new Set(),
-    orbs: 12,
+    orbs: 20,
     caught: new Set(),
     encounterCooldown: 0,
     wild: null,
@@ -67,11 +67,12 @@
     state.mode = "play";
     state.player = { x: 2, y: 2, facing: "down", moving: false, px: 2 * TILE_SIZE, py: 2 * TILE_SIZE, tx: 2, ty: 2, t: 0, step: 0 };
     state.keys.clear();
-    state.orbs = 12;
+    state.orbs = 20;
     state.caught = new Set();
     state.encounterCooldown = 0.5;
     state.wild = null;
     state.battleBusy = false;
+    state.signLooted = false;
     updateHud();
     hideOverlays();
     setMsg("Wander the path. Tall grass hides wild creatures.");
@@ -106,6 +107,15 @@
     p.px = p.x * TILE_SIZE;
     p.py = p.y * TILE_SIZE;
     p.moving = false;
+
+    // Restock cache near the route sign (tile 3,1 area — path at 3,2)
+    if (p.x === 3 && p.y === 2 && !state.signLooted && state.orbs < 8) {
+      state.orbs += 5;
+      state.signLooted = true;
+      updateHud();
+      setMsg("You found a stash of 5 Catch Orbs by the sign!");
+      return;
+    }
 
     if (state.encounterCooldown > 0) return;
 
