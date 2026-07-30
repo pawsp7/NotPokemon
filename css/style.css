@@ -325,6 +325,11 @@ body {
 .type-grass { color: #5a8a48; }
 .type-electric { color: #b89030; }
 .type-rock { color: #8a6a58; }
+.type-ghost { color: #7a68a8; }
+.type-dark { color: #6a4860; }
+.type-ice { color: #5a90b8; }
+.type-fire { color: #c86840; }
+.type-psychic { color: #a070c0; }
 
 .battle-log {
   padding: 0.9rem 1rem;
@@ -429,9 +434,178 @@ body {
   font-weight: 700;
 }
 
+.starter-row {
+  display: flex;
+  gap: 0.55rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0.85rem 0 1rem;
+}
+
+.starter-card {
+  width: 100px;
+  padding: 0.45rem;
+  border-radius: 12px;
+  border: 2px solid rgba(196, 95, 132, 0.25);
+  background: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+.starter-card img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 0.25rem;
+}
+
+.starter-card.selected,
+.starter-card:hover {
+  border-color: var(--deep-rose);
+  background: #ffe8f0;
+}
+
+.dialogue-panel {
+  width: min(460px, 100%);
+  text-align: left;
+}
+
+.npc-name {
+  margin: 0 0 0.4rem;
+  font-weight: 800;
+  color: var(--deep-rose);
+}
+
+.dlg-text {
+  margin: 0 0 1rem;
+  min-height: 3rem;
+  line-height: 1.45;
+}
+
+.shop-panel,
+.party-panel,
+.bag-panel {
+  width: min(460px, 100%);
+  max-height: 90%;
+  overflow: auto;
+}
+
+.shop-list,
+.party-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.shop-item,
+.party-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(232, 145, 176, 0.1);
+  border: 1px solid rgba(196, 95, 132, 0.15);
+}
+
+.party-item {
+  grid-template-columns: 56px 1fr auto;
+  cursor: pointer;
+}
+
+.party-item img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.party-item.lead {
+  border-color: var(--deep-rose);
+  background: rgba(232, 145, 176, 0.22);
+}
+
+.shop-money {
+  margin: 0 0 0.75rem;
+  font-weight: 700;
+  color: var(--deep-rose);
+}
+
+.dex-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dex-tab.active {
+  background: rgba(232, 145, 176, 0.28);
+}
+
+.battle-fighters {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0.75rem 0.85rem 0.5rem;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.fighter {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+}
+
+.fighter.ally canvas {
+  width: 120px;
+  height: 120px;
+  image-rendering: auto;
+  filter: drop-shadow(0 8px 14px rgba(74, 42, 50, 0.22));
+}
+
+.hp-block {
+  min-width: 120px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(255, 248, 251, 0.92);
+  border: 1px solid rgba(196, 95, 132, 0.28);
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.hp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(74, 42, 50, 0.12);
+  overflow: hidden;
+  margin: 0.25rem 0;
+}
+
+.hp-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #7ec87a, #b6e89a);
+  border-radius: inherit;
+}
+
+.hp-bar i.low { background: linear-gradient(90deg, #e07070, #f0a060); }
+
+.bag-target { margin-top: 0.75rem; }
+
 @media (max-width: 560px) {
   body { padding: 0.5rem; }
   .brand h1 { font-size: 0.68rem; }
   .helpbar span:first-child { display: none; }
   .battle-sky { min-height: 200px; }
+  .hud-btn { padding: 0.3rem 0.55rem; }
+  .starter-card { width: 88px; }
 }

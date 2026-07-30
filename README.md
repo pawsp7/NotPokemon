@@ -1,38 +1,42 @@
 # Routewild
 
-A sakura pastel top-down creature-catching game with painted pixel art.
+Sakura pastel RPG — town, two wild routes, party battles, and ten floral creatures.
 
 ## Play
-
-Open `index.html` in a browser, or:
 
 ```bash
 python3 -m http.server 8080
 ```
 
+Open [http://localhost:8080](http://localhost:8080).
+
 ## Controls
 
-- **WASD / Arrow keys** — move
-- **E** or **Dex** — Blossom Dex
-- Battle: **Throw Orb** / **Flee**
+| Key | Action |
+|-----|--------|
+| WASD / Arrows | Move |
+| Space | Talk / advance dialogue |
+| P | Party |
+| B | Bag |
+| E | Dex |
+| Esc | Close menu |
 
-## Art
+## Screens
 
-Hand-painted style assets live in `assets/`:
+1. **Petalvale** — heal shrine, shop, starter town  
+2. **Blossom Route** — first five creatures  
+3. **Mist Grove** — five rarer creatures  
 
-- `assets/world/route.png` — Blossom Route overworld
-- `assets/world/battle.png` — encounter backdrop
-- `assets/world/player.png` — trainer
-- `assets/creatures/*.png` — five floral hybrids
+## RPG
 
-### Creatures
+- Choose a starter (Bloomvu / Fernkit / Lilypurr)
+- Party of up to 3 with HP, levels, XP
+- Turn battles: Fight · Catch · Item · Flee
+- Type matchups, petals currency, shop items
+- Heal for free at Nurse Sakura
 
-| Name | Type |
-|------|------|
-| Bloomvu | Fairy |
-| Lilypurr | Water |
-| Fernkit | Grass |
-| Petalamp | Electric |
-| Roseroot | Rock |
+## Creatures (10)
 
-Catch all five to complete the route.
+**Route:** Bloomvu, Lilypurr, Fernkit, Petalamp, Roseroot  
+
+**Grove:** Mistwing, Thornpaw, Glacilia, Emberose, Crystalyn
