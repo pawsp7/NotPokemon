@@ -24,7 +24,7 @@
   };
 
   const state = {
-    mode: "title", // title | play | battle | dex | win
+    mode: "title",
     player: { x: 2, y: 2, facing: "down", moving: false, px: 0, py: 0, tx: 0, ty: 0, t: 0, step: 0 },
     keys: new Set(),
     orbs: 20,
@@ -34,10 +34,24 @@
     battleBusy: false,
     animTime: 0,
     grassWave: 0,
+    ready: false,
+    petals: [],
   };
 
-  const MOVE_SPEED = 6; // tiles per second feel via tween duration
   const MOVE_DURATION = 0.14;
+
+  // floating petals over the painted route
+  for (let i = 0; i < 28; i++) {
+    state.petals.push({
+      x: Math.random() * 640,
+      y: Math.random() * 480,
+      s: 2 + Math.random() * 3,
+      sp: 12 + Math.random() * 28,
+      drift: 8 + Math.random() * 16,
+      phase: Math.random() * Math.PI * 2,
+      color: Math.random() > 0.45 ? "#ffb7c8" : "#fff5f8",
+    });
+  }
 
   function showScreen(name) {
     Object.entries(screens).forEach(([key, el]) => {
@@ -64,8 +78,20 @@
   }
 
   function resetGame() {
+    if (!state.ready) return;
     state.mode = "play";
-    state.player = { x: 2, y: 2, facing: "down", moving: false, px: 2 * TILE_SIZE, py: 2 * TILE_SIZE, tx: 2, ty: 2, t: 0, step: 0 };
+    state.player = {
+      x: 2,
+      y: 2,
+      facing: "down",
+      moving: false,
+      px: 2 * TILE_SIZE,
+      py: 2 * TILE_SIZE,
+      tx: 2,
+      ty: 2,
+      t: 0,
+      step: 0,
+    };
     state.keys.clear();
     state.orbs = 20;
     state.caught = new Set();
@@ -108,7 +134,6 @@
     p.py = p.y * TILE_SIZE;
     p.moving = false;
 
-    // Restock cache near the route sign (tile 3,1 area — path at 3,2)
     if (p.x === 3 && p.y === 2 && !state.signLooted && state.orbs < 8) {
       state.orbs += 5;
       state.signLooted = true;
@@ -119,7 +144,7 @@
 
     if (state.encounterCooldown > 0) return;
 
-    if (isTallGrass(p.x, p.y) && Math.random() < 0.22) {
+    if (isTallGrass(p.x, p.y) && Math.random() < 0.24) {
       startBattle();
     } else if (isTallGrass(p.x, p.y)) {
       setMsg("Petals shiver in the grass…");
@@ -127,7 +152,6 @@
   }
 
   function startBattle() {
-    // Prefer uncaught creatures so the player can complete the dex
     const uncaught = CREATURES.filter((c) => !state.caught.has(c.id)).map((c) => c.id);
     const preferUncaught = Math.random() < 0.7 && uncaught.length > 0;
     state.wild = preferUncaught
@@ -153,7 +177,7 @@
   function drawBattleSprite(shakeX = 0) {
     battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
     if (!state.wild) return;
-    drawCreature(battleCtx, state.wild, 96 + shakeX, 108, 5.5);
+    drawCreature(battleCtx, state.wild, battleCanvas.width / 2 + shakeX, battleCanvas.height / 2 + 6, 1.15);
   }
 
   function endBattle(fled = false) {
@@ -170,7 +194,7 @@
     if (state.caught.size >= CREATURES.length) {
       state.mode = "win";
       showScreen("win");
-      setMsg("Meadow Route is complete!");
+      setMsg("Blossom Route is complete!");
     }
   }
 
@@ -191,16 +215,13 @@
     let shakes = 0;
     const maxShakes = 3;
     const alreadyOwned = state.caught.has(state.wild.id);
-
-    // Soft bonus if player already has it — still can "catch" for flavor but won't double-count
     let rate = state.wild.catchRate;
-    if (state.orbs <= 3) rate += 0.08; // clutch bonus
-
+    if (state.orbs <= 3) rate += 0.08;
     const success = Math.random() < rate;
 
     const shakeInterval = setInterval(() => {
       shakes += 1;
-      const shake = (shakes % 2 === 0 ? 1 : -1) * 6;
+      const shake = (shakes % 2 === 0 ? 1 : -1) * 8;
       drawBattleSprite(shake);
       ui.battleLog.textContent = `The Orb shakes… (${shakes}/${maxShakes})`;
 
@@ -208,7 +229,7 @@
         clearInterval(shakeInterval);
         if (success) {
           battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
-          drawOrb(battleCtx, 96, 100);
+          drawOrb(battleCtx, battleCanvas.width / 2, battleCanvas.height / 2);
           if (alreadyOwned) {
             ui.battleLog.textContent = `${state.wild.name} was caught again! (already in Dex)`;
           } else {
@@ -242,17 +263,15 @@
       const li = document.createElement("li");
       li.className = `dex-item${owned ? "" : " locked"}`;
 
-      const thumb = document.createElement("canvas");
-      thumb.width = 48;
-      thumb.height = 48;
-      const tctx = thumb.getContext("2d");
-      if (owned) {
-        drawCreature(tctx, creature, 24, 30, 1.5);
+      const thumb = document.createElement("div");
+      thumb.className = "dex-thumb";
+      if (owned && IMAGES[creature.id]) {
+        const img = document.createElement("img");
+        img.src = ASSET_URLS[creature.id];
+        img.alt = creature.name;
+        thumb.appendChild(img);
       } else {
-        tctx.fillStyle = "#c45f84";
-        tctx.font = "22px Quicksand, sans-serif";
-        tctx.textAlign = "center";
-        tctx.fillText("?", 24, 32);
+        thumb.textContent = "?";
       }
 
       const info = document.createElement("div");
@@ -273,8 +292,7 @@
 
   function openDex() {
     if (state.mode === "battle" || state.mode === "title") return;
-    const prev = state.mode;
-    state._prevMode = prev;
+    state._prevMode = state.mode;
     state.mode = "dex";
     renderDex();
     showScreen("dex");
@@ -291,128 +309,33 @@
     }
   }
 
-  // --- Drawing the overworld (sakura pastel tiles) ---
-  function drawTile(tx, ty, tile) {
-    const x = tx * TILE_SIZE;
-    const y = ty * TILE_SIZE;
-    const checker = (tx + ty) % 2 === 0;
-
-    switch (tile) {
-      case TILE.GRASS:
-        ctx.fillStyle = checker ? "#d4c0c4" : "#cbb8bc";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        // soft green undertone flecks
-        ctx.fillStyle = "#c0c8b4";
-        ctx.fillRect(x + 5, y + 7, 3, 3);
-        ctx.fillRect(x + 18, y + 16, 3, 3);
-        ctx.fillStyle = "#f2a0b8";
-        ctx.fillRect(x + 12, y + 20, 2, 2);
-        break;
-      case TILE.FLOWER:
-        ctx.fillStyle = checker ? "#d8b8c4" : "#d0b0bc";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        // sakura clusters
-        ctx.fillStyle = "#ffb7c8";
-        ctx.fillRect(x + 8, y + 8, 5, 5);
-        ctx.fillStyle = "#fff0f5";
-        ctx.fillRect(x + 10, y + 10, 2, 2);
-        ctx.fillStyle = "#e891b0";
-        ctx.fillRect(x + 18, y + 14, 5, 5);
-        ctx.fillStyle = "#fff8fb";
-        ctx.fillRect(x + 20, y + 16, 2, 2);
-        ctx.fillStyle = "#d4688a";
-        ctx.fillRect(x + 6, y + 20, 4, 4);
-        break;
-      case TILE.PATH:
-        ctx.fillStyle = checker ? "#e8d0b8" : "#dec4a8";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#c8a888";
-        ctx.fillRect(x + 4, y + 12, 2, 2);
-        ctx.fillRect(x + 20, y + 6, 2, 2);
-        ctx.fillStyle = "#f2a0b8";
-        if ((tx + ty) % 5 === 0) ctx.fillRect(x + 14, y + 18, 2, 2);
-        break;
-      case TILE.TALL: {
-        ctx.fillStyle = checker ? "#c8a0b0" : "#c098a8";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        const wave = Math.sin(state.grassWave + tx * 0.7 + ty * 0.5) * 2;
-        for (let i = 0; i < 4; i++) {
-          const gx = x + 4 + i * 7 + wave;
-          ctx.fillStyle = "#9a7088";
-          ctx.fillRect(gx, y + 8, 3, 20);
-          ctx.fillStyle = "#e891b0";
-          ctx.fillRect(gx, y + 5, 3, 7);
-          ctx.fillStyle = "#fff0f5";
-          ctx.fillRect(gx + 1, y + 4, 1, 2);
-        }
-        break;
+  function drawTallGrassHint() {
+    // soft shimmer over encounter tiles so players can still read the painted map
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        if (getTile(x, y) !== TILE.TALL) continue;
+        const pulse = 0.08 + Math.sin(state.grassWave * 2 + x * 0.4 + y * 0.3) * 0.05;
+        ctx.fillStyle = `rgba(255, 183, 200, ${pulse})`;
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
       }
-      case TILE.TREE: {
-        // fluffy cherry blossom tree
-        ctx.fillStyle = "#cbb8bc";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#6b3f48";
-        ctx.fillRect(x + 13, y + 18, 6, 12);
-        ctx.fillStyle = "#8b5a64";
-        ctx.fillRect(x + 14, y + 18, 2, 8);
-        // layered fluffy canopy
-        ctx.fillStyle = "#c45f84";
-        ctx.fillRect(x + 1, y + 6, 30, 14);
-        ctx.fillStyle = "#e891b0";
-        ctx.fillRect(x + 3, y + 3, 26, 14);
-        ctx.fillStyle = "#ffb7c8";
-        ctx.fillRect(x + 6, y + 1, 20, 12);
-        ctx.fillStyle = "#fff0f5";
-        ctx.fillRect(x + 9, y + 4, 5, 4);
-        ctx.fillRect(x + 17, y + 7, 4, 3);
-        ctx.fillStyle = "#d4688a";
-        ctx.fillRect(x + 4, y + 12, 3, 3);
-        ctx.fillRect(x + 22, y + 10, 3, 3);
-        break;
-      }
-      case TILE.WATER: {
-        ctx.fillStyle = "#a8c0d8";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        const w = Math.sin(state.grassWave * 1.5 + tx + ty) * 2;
-        ctx.fillStyle = "#c0d8ec";
-        ctx.fillRect(x + 4, y + 10 + w, 10, 3);
-        ctx.fillRect(x + 16, y + 18 - w, 10, 3);
-        // lily pad
-        if ((tx + ty) % 2 === 0) {
-          ctx.fillStyle = "#8eb878";
-          ctx.fillRect(x + 10, y + 12, 8, 5);
-          ctx.fillStyle = "#f2a0b8";
-          ctx.fillRect(x + 12, y + 11, 3, 3);
-        }
-        break;
-      }
-      case TILE.ROCK:
-        ctx.fillStyle = checker ? "#d4c0c4" : "#cbb8bc";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#a89080";
-        ctx.fillRect(x + 6, y + 10, 20, 14);
-        ctx.fillStyle = "#c8b4a4";
-        ctx.fillRect(x + 8, y + 8, 16, 8);
-        ctx.fillStyle = "#8aaa70";
-        ctx.fillRect(x + 10, y + 10, 4, 3);
-        ctx.fillStyle = "#e891b0";
-        ctx.fillRect(x + 18, y + 12, 3, 3);
-        break;
-      default:
-        ctx.fillStyle = "#c4a0b0";
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
     }
   }
 
-  function drawPetals() {
-    const t = state.animTime;
-    for (let i = 0; i < 14; i++) {
-      const x = ((i * 97 + t * (12 + (i % 5))) % (canvas.width + 20)) - 10;
-      const y = ((i * 53 + t * (8 + (i % 3)) + Math.sin(t + i) * 20) % (canvas.height + 20));
-      const size = 2 + (i % 3);
-      ctx.fillStyle = i % 2 === 0 ? "#ffb7c8" : "#fff0f5";
-      ctx.globalAlpha = 0.55;
-      ctx.fillRect(x, y, size, size);
+  function drawPetals(dt) {
+    for (const p of state.petals) {
+      p.y += p.sp * dt;
+      p.x += Math.sin(state.animTime * 1.4 + p.phase) * p.drift * dt;
+      if (p.y > 490) {
+        p.y = -6;
+        p.x = Math.random() * 640;
+      }
+      if (p.x < -10) p.x = 650;
+      if (p.x > 650) p.x = -10;
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.s, p.s * 0.6, p.phase + state.animTime, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
@@ -420,33 +343,24 @@
   function drawWorld() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let y = 0; y < MAP_H; y++) {
-      for (let x = 0; x < MAP_W; x++) {
-        drawTile(x, y, getTile(x, y));
-      }
+    if (IMAGES.route) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(IMAGES.route, 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = "#e8b8c8";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // route sign
-    ctx.fillStyle = "#6b3f48";
-    ctx.fillRect(3 * TILE_SIZE + 10, 1 * TILE_SIZE + 8, 4, 18);
-    ctx.fillStyle = "#fff0f5";
-    ctx.fillRect(3 * TILE_SIZE + 2, 1 * TILE_SIZE + 4, 20, 12);
-    ctx.strokeStyle = "#c45f84";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(3 * TILE_SIZE + 2, 1 * TILE_SIZE + 4, 20, 12);
-    ctx.fillStyle = "#5c3040";
-    ctx.font = "bold 7px Quicksand, sans-serif";
-    ctx.fillText("B1", 3 * TILE_SIZE + 7, 1 * TILE_SIZE + 13);
-
-    drawPetals();
+    drawTallGrassHint();
+    drawPetals(0); // positions already advanced in frame()
 
     const p = state.player;
     drawPlayer(ctx, p.px, p.py, p.facing, p.step);
 
-    // soft rose vignette
-    const g = ctx.createRadialGradient(320, 240, 140, 320, 240, 420);
+    // soft vignette
+    const g = ctx.createRadialGradient(320, 240, 150, 320, 240, 430);
     g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(90, 48, 64, 0.22)");
+    g.addColorStop(1, "rgba(74, 42, 50, 0.2)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -500,8 +414,6 @@
     endBattle(true);
   });
 
-  // Touch / on-screen friendly: click canvas edges? skip for simplicity
-
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
@@ -509,9 +421,17 @@
     state.animTime += dt;
     state.grassWave += dt * 3;
 
-    if (state.encounterCooldown > 0) {
-      state.encounterCooldown -= dt;
+    // advance petals
+    for (const p of state.petals) {
+      p.y += p.sp * dt;
+      p.x += Math.sin(state.animTime * 1.4 + p.phase) * p.drift * dt;
+      if (p.y > 490) {
+        p.y = -6;
+        p.x = Math.random() * 640;
+      }
     }
+
+    if (state.encounterCooldown > 0) state.encounterCooldown -= dt;
 
     if (state.mode === "play") {
       const p = state.player;
@@ -530,21 +450,35 @@
       }
     }
 
-    if (state.mode === "play" || state.mode === "dex" || state.mode === "title" || state.mode === "win") {
-      // keep world visible under overlays
-      if (state.mode !== "title" || true) drawWorld();
-    } else if (state.mode === "battle") {
-      drawWorld();
-    }
+    if (state.ready) drawWorld();
 
     requestAnimationFrame(frame);
   }
 
-  // Init player pixel pos
+  // boot
   state.player.px = state.player.x * TILE_SIZE;
   state.player.py = state.player.y * TILE_SIZE;
   updateHud();
   showScreen("title");
-  drawWorld();
+  setMsg("Loading blossom sprites…");
+
+  loadImages()
+    .then(() => {
+      state.ready = true;
+      // apply battle background image to CSS element
+      const sky = document.querySelector(".battle-sky");
+      if (sky && IMAGES.battle) {
+        sky.style.backgroundImage = `url(${ASSET_URLS.battle})`;
+        sky.style.backgroundSize = "cover";
+        sky.style.backgroundPosition = "center";
+      }
+      setMsg("Wander the path and step into the blossom grass.");
+      drawWorld();
+    })
+    .catch((err) => {
+      console.error(err);
+      setMsg("Failed to load art assets.");
+    });
+
   requestAnimationFrame(frame);
 })();
