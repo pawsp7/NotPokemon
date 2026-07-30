@@ -1,99 +1,170 @@
-/** Floral hybrid creatures of Blossom Route — pastel sakura style */
+/** 10 floral hybrids — Blossom Route + Mist Grove */
+const TYPES = ["Fairy", "Water", "Grass", "Electric", "Rock", "Ghost", "Dark", "Ice", "Fire", "Psychic"];
+
+const TYPE_CHART = {
+  Fairy: { Dark: 1.5, Fire: 0.75, Rock: 0.75 },
+  Water: { Fire: 1.5, Rock: 1.5, Grass: 0.75 },
+  Grass: { Water: 1.5, Rock: 1.5, Fire: 0.75 },
+  Electric: { Water: 1.5, Grass: 0.75, Rock: 0.75 },
+  Rock: { Fire: 1.5, Ice: 1.5, Grass: 0.75 },
+  Ghost: { Ghost: 1.5, Psychic: 1.5, Dark: 0.75 },
+  Dark: { Ghost: 1.5, Psychic: 1.5, Fairy: 0.75 },
+  Ice: { Grass: 1.5, Fairy: 0.75, Fire: 0.75 },
+  Fire: { Grass: 1.5, Ice: 1.5, Water: 0.75, Rock: 0.75 },
+  Psychic: { Fairy: 1.25, Dark: 0.75, Ghost: 0.75 },
+};
+
 const CREATURES = [
   {
     id: "bloomvu",
     name: "Bloomvu",
     type: "Fairy",
+    area: "route",
     catchRate: 0.5,
     description: "A blossom fox crowned in sakura. Petals trail wherever it trots.",
-    colors: {
-      body: "#f3d0dc",
-      light: "#fff0f5",
-      mid: "#e8a8bc",
-      dark: "#8b4a5c",
-      outline: "#5c3040",
-      eye: "#3a1824",
-      flower: "#f2a0b8",
-      flowerDeep: "#d4688a",
-      glow: "#ffc4d4",
-    },
+    colors: { glow: "#ffc4d4" },
     weight: 26,
+    base: { hp: 42, atk: 38, def: 34, spd: 40 },
+    moves: [
+      { name: "Petal Tap", power: 18, type: "Fairy" },
+      { name: "Bloom Dash", power: 24, type: "Fairy" },
+    ],
   },
   {
     id: "lilypurr",
     name: "Lilypurr",
     type: "Water",
+    area: "route",
     catchRate: 0.58,
     description: "A pond cat wrapped in lily pads. Dew beads cling to its whiskers.",
-    colors: {
-      body: "#c8dff0",
-      light: "#eef7ff",
-      mid: "#8eb8d8",
-      dark: "#4a6f8a",
-      outline: "#3a5068",
-      eye: "#243848",
-      flower: "#f0b8d0",
-      flowerDeep: "#c878a0",
-      glow: "#b8dcf0",
-    },
+    colors: { glow: "#b8dcf0" },
     weight: 28,
+    base: { hp: 40, atk: 36, def: 36, spd: 38 },
+    moves: [
+      { name: "Dew Slap", power: 18, type: "Water" },
+      { name: "Lily Splash", power: 24, type: "Water" },
+    ],
   },
   {
     id: "fernkit",
     name: "Fernkit",
     type: "Grass",
+    area: "route",
     catchRate: 0.55,
     description: "A soft rabbit sprouting fern curls. It naps under petal shade.",
-    colors: {
-      body: "#d8eccc",
-      light: "#f2faec",
-      mid: "#a8d090",
-      dark: "#5a8050",
-      outline: "#3f5a38",
-      eye: "#243820",
-      flower: "#f0c8a8",
-      flowerDeep: "#d09070",
-      glow: "#c8e8b0",
-    },
+    colors: { glow: "#c8e8b0" },
     weight: 24,
+    base: { hp: 44, atk: 34, def: 38, spd: 36 },
+    moves: [
+      { name: "Leaf Nibble", power: 16, type: "Grass" },
+      { name: "Fern Whip", power: 22, type: "Grass" },
+    ],
   },
   {
     id: "petalamp",
     name: "Petalamp",
     type: "Electric",
+    area: "route",
     catchRate: 0.48,
     description: "A moth whose wisteria wings spark with gentle static pollen.",
-    colors: {
-      body: "#f5e4b8",
-      light: "#fff8e4",
-      mid: "#e0c878",
-      dark: "#9a8040",
-      outline: "#6a5830",
-      eye: "#382818",
-      flower: "#d8b8f0",
-      flowerDeep: "#a070c8",
-      glow: "#ffe8a0",
-    },
+    colors: { glow: "#ffe8a0" },
     weight: 18,
+    base: { hp: 36, atk: 42, def: 30, spd: 44 },
+    moves: [
+      { name: "Pollen Zap", power: 20, type: "Electric" },
+      { name: "Static Flutter", power: 26, type: "Electric" },
+    ],
   },
   {
     id: "roseroot",
     name: "Roseroot",
     type: "Rock",
+    area: "route",
     catchRate: 0.42,
     description: "A stony cub laced with rose vines. Soft moss grows in its cracks.",
-    colors: {
-      body: "#d4c0b0",
-      light: "#f0e4d8",
-      mid: "#b09888",
-      dark: "#6a5848",
-      outline: "#4a3a30",
-      eye: "#2a2018",
-      flower: "#e890a0",
-      flowerDeep: "#b85868",
-      glow: "#e0d0c0",
-    },
+    colors: { glow: "#e0d0c0" },
     weight: 14,
+    base: { hp: 48, atk: 40, def: 46, spd: 28 },
+    moves: [
+      { name: "Pebble Toss", power: 18, type: "Rock" },
+      { name: "Rose Crush", power: 26, type: "Rock" },
+    ],
+  },
+  // --- Mist Grove (5 new) ---
+  {
+    id: "mistwing",
+    name: "Mistwing",
+    type: "Ghost",
+    area: "grove",
+    catchRate: 0.45,
+    description: "A mist moth that drifts through fog. Touching it feels like cool silk.",
+    colors: { glow: "#d8c8f0" },
+    weight: 20,
+    base: { hp: 38, atk: 40, def: 32, spd: 46 },
+    moves: [
+      { name: "Veil Touch", power: 18, type: "Ghost" },
+      { name: "Phantom Gust", power: 25, type: "Ghost" },
+    ],
+  },
+  {
+    id: "thornpaw",
+    name: "Thornpaw",
+    type: "Dark",
+    area: "grove",
+    catchRate: 0.44,
+    description: "A bramble cat crowned in thorns and roses. Soft steps, sharp glare.",
+    colors: { glow: "#c8a0b8" },
+    weight: 16,
+    base: { hp: 40, atk: 44, def: 34, spd: 42 },
+    moves: [
+      { name: "Bramble Scratch", power: 20, type: "Dark" },
+      { name: "Night Bloom", power: 26, type: "Dark" },
+    ],
+  },
+  {
+    id: "glacilia",
+    name: "Glacilia",
+    type: "Ice",
+    area: "grove",
+    catchRate: 0.46,
+    description: "A frost hare with crystal blossom ears. Breath like winter sugar.",
+    colors: { glow: "#c8e8f8" },
+    weight: 18,
+    base: { hp: 42, atk: 38, def: 36, spd: 40 },
+    moves: [
+      { name: "Frost Nuzzle", power: 18, type: "Ice" },
+      { name: "Crystal Flurry", power: 25, type: "Ice" },
+    ],
+  },
+  {
+    id: "emberose",
+    name: "Emberose",
+    type: "Fire",
+    area: "grove",
+    catchRate: 0.43,
+    description: "A rose-fire fox. Warm petals flicker along its ember mane.",
+    colors: { glow: "#ffc090" },
+    weight: 17,
+    base: { hp: 40, atk: 46, def: 32, spd: 44 },
+    moves: [
+      { name: "Ember Kiss", power: 20, type: "Fire" },
+      { name: "Roseflare", power: 27, type: "Fire" },
+    ],
+  },
+  {
+    id: "crystalyn",
+    name: "Crystalyn",
+    type: "Psychic",
+    area: "grove",
+    catchRate: 0.4,
+    description: "A crystal fawn whose antlers hum with soft thought-flowers.",
+    colors: { glow: "#e0d0ff" },
+    weight: 12,
+    base: { hp: 44, atk: 42, def: 38, spd: 38 },
+    moves: [
+      { name: "Mind Petal", power: 19, type: "Psychic" },
+      { name: "Prism Gaze", power: 28, type: "Psychic" },
+    ],
   },
 ];
 
@@ -101,9 +172,14 @@ function getCreatureById(id) {
   return CREATURES.find((c) => c.id === id);
 }
 
-function rollWildEncounter(excludeIds = []) {
-  const pool = CREATURES.filter((c) => !excludeIds.includes(c.id));
-  const source = pool.length ? pool : CREATURES;
+function creaturesForArea(area) {
+  return CREATURES.filter((c) => c.area === area);
+}
+
+function rollWildEncounter(area, excludeIds = []) {
+  const pool = creaturesForArea(area).filter((c) => !excludeIds.includes(c.id));
+  const source = pool.length ? pool : creaturesForArea(area);
+  if (!source.length) return CREATURES[0];
   const total = source.reduce((sum, c) => sum + c.weight, 0);
   let roll = Math.random() * total;
   for (const creature of source) {
@@ -111,4 +187,10 @@ function rollWildEncounter(excludeIds = []) {
     if (roll <= 0) return creature;
   }
   return source[source.length - 1];
+}
+
+function typeMultiplier(moveType, targetType) {
+  const row = TYPE_CHART[moveType];
+  if (!row) return 1;
+  return row[targetType] || 1;
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Routewild — Blossom Route</title>
+  <title>Routewild — Petalvale RPG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -17,8 +17,12 @@
         <h1>Routewild</h1>
       </div>
       <div class="hud">
-        <span id="orb-count" class="hud-pill">Orbs: 20</span>
-        <span id="caught-count" class="hud-pill">Caught: 0/5</span>
+        <span id="loc-pill" class="hud-pill">Petalvale</span>
+        <span id="money-count" class="hud-pill">❀ 80</span>
+        <span id="orb-count" class="hud-pill">Orbs: 15</span>
+        <span id="caught-count" class="hud-pill">Dex: 0/10</span>
+        <button id="btn-party" type="button" class="hud-btn">Party</button>
+        <button id="btn-bag" type="button" class="hud-btn">Bag</button>
         <button id="btn-dex" type="button" class="hud-btn">Dex</button>
       </div>
     </header>
@@ -26,62 +30,151 @@
     <main class="stage">
       <canvas id="game" width="640" height="480" aria-label="Routewild game canvas"></canvas>
 
+      <!-- Title / starter pick -->
       <section id="screen-title" class="overlay screen">
         <div class="panel title-panel">
-          <p class="eyebrow">Blossom Route</p>
+          <p class="eyebrow">Petalvale Adventures</p>
           <h2>Routewild</h2>
-          <p class="lede">Soft petals, quiet paths, and five floral creatures waiting in the tall grass.</p>
-          <button id="btn-start" type="button" class="cta">Start Adventure</button>
-          <p class="hint">Move with WASD / Arrow keys · E opens Dex</p>
+          <p class="lede">Explore town, routes, and a misty grove. Raise a party of floral creatures.</p>
+          <div id="starter-pick" class="starter-row">
+            <button type="button" class="starter-card" data-starter="bloomvu">
+              <img src="assets/creatures/bloomvu.png" alt="Bloomvu" />
+              <span>Bloomvu</span>
+            </button>
+            <button type="button" class="starter-card" data-starter="fernkit">
+              <img src="assets/creatures/fernkit.png" alt="Fernkit" />
+              <span>Fernkit</span>
+            </button>
+            <button type="button" class="starter-card" data-starter="lilypurr">
+              <img src="assets/creatures/lilypurr.png" alt="Lilypurr" />
+              <span>Lilypurr</span>
+            </button>
+          </div>
+          <button id="btn-start" type="button" class="cta" disabled>Choose a starter</button>
+          <p class="hint">WASD / Arrows move · Space talk · P party · B bag · E dex</p>
         </div>
       </section>
 
+      <!-- Dialogue -->
+      <section id="screen-dialogue" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel dialogue-panel">
+          <p class="npc-name" id="dlg-name">NPC</p>
+          <p class="dlg-text" id="dlg-text">…</p>
+          <button id="btn-dlg-next" type="button" class="cta">Next</button>
+        </div>
+      </section>
+
+      <!-- Shop -->
+      <section id="screen-shop" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel shop-panel">
+          <div class="dex-head">
+            <h2>Petal Shop</h2>
+            <button id="btn-shop-close" type="button" class="ghost">Close</button>
+          </div>
+          <p class="shop-money" id="shop-money">Your petals: 80</p>
+          <ul id="shop-list" class="shop-list"></ul>
+        </div>
+      </section>
+
+      <!-- Party -->
+      <section id="screen-party" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel party-panel">
+          <div class="dex-head">
+            <h2>Party</h2>
+            <button id="btn-party-close" type="button" class="ghost">Close</button>
+          </div>
+          <ul id="party-list" class="party-list"></ul>
+          <p class="hint">Lead creature fights first. Click to set lead.</p>
+        </div>
+      </section>
+
+      <!-- Bag -->
+      <section id="screen-bag" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel bag-panel">
+          <div class="dex-head">
+            <h2>Bag</h2>
+            <button id="btn-bag-close" type="button" class="ghost">Close</button>
+          </div>
+          <ul id="bag-list" class="shop-list"></ul>
+          <div id="bag-target" class="bag-target hidden">
+            <p>Use on which ally?</p>
+            <div id="bag-targets" class="starter-row"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Battle -->
       <section id="screen-battle" class="overlay screen hidden" aria-hidden="true">
         <div class="battle-layout">
           <div class="battle-sky">
             <div class="petal-fall" aria-hidden="true"></div>
-            <canvas id="battle-sprite" width="256" height="256"></canvas>
-            <div class="battle-nameplate">
-              <strong id="battle-name">Creature</strong>
-              <span id="battle-type" class="type-tag">Type</span>
+            <div class="battle-fighters">
+              <div class="fighter ally">
+                <div class="hp-block">
+                  <strong id="ally-name">Ally</strong>
+                  <div class="hp-bar"><i id="ally-hp-fill"></i></div>
+                  <span id="ally-hp-text">0/0</span>
+                </div>
+                <canvas id="ally-sprite" width="160" height="160"></canvas>
+              </div>
+              <div class="fighter foe">
+                <div class="hp-block">
+                  <strong id="battle-name">Creature</strong>
+                  <span id="battle-type" class="type-tag">Type</span>
+                  <div class="hp-bar"><i id="foe-hp-fill"></i></div>
+                  <span id="foe-hp-text">0/0</span>
+                </div>
+                <canvas id="battle-sprite" width="200" height="200"></canvas>
+              </div>
             </div>
           </div>
           <div class="battle-log" id="battle-log">A wild creature appeared!</div>
-          <div class="battle-actions">
-            <button id="btn-throw" type="button" class="cta">Throw Orb</button>
+          <div class="battle-actions" id="battle-main-actions">
+            <button id="btn-fight" type="button" class="cta">Fight</button>
+            <button id="btn-throw" type="button" class="cta">Catch</button>
+            <button id="btn-item" type="button" class="ghost">Item</button>
             <button id="btn-flee" type="button" class="ghost">Flee</button>
           </div>
+          <div class="battle-actions hidden" id="battle-move-actions"></div>
         </div>
       </section>
 
+      <!-- Dex -->
       <section id="screen-dex" class="overlay screen hidden" aria-hidden="true">
         <div class="panel dex-panel">
           <div class="dex-head">
             <h2>Blossom Dex</h2>
             <button id="btn-dex-close" type="button" class="ghost">Close</button>
           </div>
+          <div class="dex-tabs">
+            <button type="button" class="ghost dex-tab active" data-area="all">All</button>
+            <button type="button" class="ghost dex-tab" data-area="route">Route</button>
+            <button type="button" class="ghost dex-tab" data-area="grove">Grove</button>
+          </div>
           <ul id="dex-list" class="dex-list"></ul>
         </div>
       </section>
 
+      <!-- Win -->
       <section id="screen-win" class="overlay screen hidden" aria-hidden="true">
         <div class="panel title-panel">
-          <p class="eyebrow">Route complete</p>
-          <h2>All Five Caught!</h2>
-          <p class="lede">Every blossom creature on the route is now in your Dex.</p>
+          <p class="eyebrow">Legend of Petalvale</p>
+          <h2>All Ten Caught!</h2>
+          <p class="lede">You documented every blossom creature across town’s wilds.</p>
           <button id="btn-replay" type="button" class="cta">Play Again</button>
         </div>
       </section>
     </main>
 
     <footer class="helpbar">
-      <span>Blossom Route · Petals hide wild creatures</span>
-      <span id="msg">Wander the path and step into the blossom grass.</span>
+      <span id="area-hint">Petalvale · Heal, shop, then head south</span>
+      <span id="msg">Choose a starter to begin.</span>
     </footer>
   </div>
 
   <script src="js/creatures.js"></script>
-  <script src="js/map.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/rpg.js"></script>
   <script src="js/sprites.js"></script>
   <script src="js/game.js"></script>
 </body>
