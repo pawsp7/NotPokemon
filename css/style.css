@@ -243,10 +243,10 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 240px;
+  min-height: 260px;
   border-radius: var(--radius);
   background:
-    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.55), transparent 40%),
+    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.35), transparent 40%),
     linear-gradient(180deg, #f7c8d8 0%, #f0d8e4 45%, #c8d8b0 100%);
   border: 2px solid rgba(255, 255, 255, 0.55);
   overflow: hidden;
@@ -283,12 +283,13 @@ body {
 }
 
 #battle-sprite {
-  width: 168px;
-  height: 168px;
-  image-rendering: pixelated;
+  width: 200px;
+  height: 200px;
+  image-rendering: auto;
   animation: bob 1.5s ease-in-out infinite;
   position: relative;
   z-index: 1;
+  filter: drop-shadow(0 10px 18px rgba(74, 42, 50, 0.25));
 }
 
 @keyframes bob {
@@ -366,13 +367,32 @@ body {
 
 .dex-item {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 72px 1fr auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.55rem 0.65rem;
   border-radius: 12px;
   background: rgba(232, 145, 176, 0.1);
   border: 1px solid rgba(196, 95, 132, 0.15);
+}
+
+.dex-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffe8f0, #f0d8e0);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #c45f84;
+}
+
+.dex-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .dex-item canvas {

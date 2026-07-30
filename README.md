@@ -1,35 +1,38 @@
 # Routewild
 
-A soft pastel, sakura-styled top-down creature-catching game.
+A sakura pastel top-down creature-catching game with painted pixel art.
 
 ## Play
 
-Open `index.html` in a browser, or serve the folder:
+Open `index.html` in a browser, or:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then visit [http://localhost:8080](http://localhost:8080).
-
 ## Controls
 
 - **WASD / Arrow keys** — move
-- **E** or **Dex** button — open Blossom Dex
-- In battle: **Throw Orb** to catch, **Flee** to escape
+- **E** or **Dex** — Blossom Dex
+- Battle: **Throw Orb** / **Flee**
 
-## Blossom Route
+## Art
 
-Cherry trees, pink grass, petal paths, a lily pond, and mossy stones.
+Hand-painted style assets live in `assets/`:
 
-### Creatures (5)
+- `assets/world/route.png` — Blossom Route overworld
+- `assets/world/battle.png` — encounter backdrop
+- `assets/world/player.png` — trainer
+- `assets/creatures/*.png` — five floral hybrids
 
-| Name | Type | Notes |
-|------|------|--------|
-| Bloomvu | Fairy | Sakura fox with a blossom crown & petal tail |
-| Lilypurr | Water | Pond cat wrapped in lily pads |
-| Fernkit | Grass | Soft rabbit with fern-curl ears |
-| Petalamp | Electric | Wisteria moth that sheds static pollen |
-| Roseroot | Rock | Stony cub laced with rose vines |
+### Creatures
 
-Catch all five to complete the route. You start with 20 Catch Orbs.
+| Name | Type |
+|------|------|
+| Bloomvu | Fairy |
+| Lilypurr | Water |
+| Fernkit | Grass |
+| Petalamp | Electric |
+| Roseroot | Rock |
+
+Catch all five to complete the route.
