@@ -1,6 +1,6 @@
 # Routewild
 
-A simple top-down creature-catching game inspired by classic field adventures.
+A soft pastel, sakura-styled top-down creature-catching game.
 
 ## Play
 
@@ -15,21 +15,21 @@ Then visit [http://localhost:8080](http://localhost:8080).
 ## Controls
 
 - **WASD / Arrow keys** — move
-- **E** or **Dex** button — open Field Dex
+- **E** or **Dex** button — open Blossom Dex
 - In battle: **Throw Orb** to catch, **Flee** to escape
 
-## Meadow Route
+## Blossom Route
 
-One route with tall grass, a path, trees, flowers, rocks, and a small pond.
+Cherry trees, pink grass, petal paths, a lily pond, and mossy stones.
 
 ### Creatures (5)
 
 | Name | Type | Notes |
 |------|------|--------|
-| Pyrokit | Fire | Fox-kit with an ember tail |
-| Aquibble | Water | Puddle hopper with bubbles |
-| Verdwing | Grass | Leafy moth |
-| Voltmite | Electric | Static beetle |
-| Gravpaw | Rock | Stony cub |
+| Bloomvu | Fairy | Sakura fox with a blossom crown & petal tail |
+| Lilypurr | Water | Pond cat wrapped in lily pads |
+| Fernkit | Grass | Soft rabbit with fern-curl ears |
+| Petalamp | Electric | Wisteria moth that sheds static pollen |
+| Roseroot | Rock | Stony cub laced with rose vines |
 
 Catch all five to complete the route. You start with 20 Catch Orbs.

@@ -1,4 +1,4 @@
-/** Tile legend for Meadow Route */
+/** Tile legend for Blossom Route */
 const TILE = {
   GRASS: 0,
   PATH: 1,
@@ -14,8 +14,8 @@ const MAP_W = 20;
 const MAP_H = 15;
 
 /**
- * Meadow Route — a single looping field with path, tall grass pockets,
- * trees, a small pond, and rocks.
+ * Blossom Route — sakura grove with soft paths, petal grass,
+ * cherry trees, a lily pond, and mossy stones.
  */
 const MEADOW_MAP = [
   [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],

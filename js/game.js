@@ -75,7 +75,7 @@
     state.signLooted = false;
     updateHud();
     hideOverlays();
-    setMsg("Wander the path. Tall grass hides wild creatures.");
+    setMsg("Wander the path. Blossom grass hides wild creatures.");
   }
 
   function tryMove(dx, dy) {
@@ -122,7 +122,7 @@
     if (isTallGrass(p.x, p.y) && Math.random() < 0.22) {
       startBattle();
     } else if (isTallGrass(p.x, p.y)) {
-      setMsg("The grass rustles…");
+      setMsg("Petals shiver in the grass…");
     }
   }
 
@@ -153,7 +153,7 @@
   function drawBattleSprite(shakeX = 0) {
     battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
     if (!state.wild) return;
-    drawCreature(battleCtx, state.wild, 80 + shakeX, 90, 5);
+    drawCreature(battleCtx, state.wild, 96 + shakeX, 108, 5.5);
   }
 
   function endBattle(fled = false) {
@@ -208,7 +208,7 @@
         clearInterval(shakeInterval);
         if (success) {
           battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
-          drawOrb(battleCtx, 80, 90);
+          drawOrb(battleCtx, 96, 100);
           if (alreadyOwned) {
             ui.battleLog.textContent = `${state.wild.name} was caught again! (already in Dex)`;
           } else {
@@ -247,10 +247,10 @@
       thumb.height = 48;
       const tctx = thumb.getContext("2d");
       if (owned) {
-        drawCreature(tctx, creature, 24, 28, 1.6);
+        drawCreature(tctx, creature, 24, 30, 1.5);
       } else {
-        tctx.fillStyle = "#3a4a3a";
-        tctx.font = "20px sans-serif";
+        tctx.fillStyle = "#c45f84";
+        tctx.font = "22px Quicksand, sans-serif";
         tctx.textAlign = "center";
         tctx.fillText("?", 24, 32);
       }
@@ -291,7 +291,7 @@
     }
   }
 
-  // --- Drawing the overworld ---
+  // --- Drawing the overworld (sakura pastel tiles) ---
   function drawTile(tx, ty, tile) {
     const x = tx * TILE_SIZE;
     const y = ty * TILE_SIZE;
@@ -299,104 +299,154 @@
 
     switch (tile) {
       case TILE.GRASS:
-        ctx.fillStyle = checker ? "#4f8f45" : "#45853c";
+        ctx.fillStyle = checker ? "#d4c0c4" : "#cbb8bc";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#6db36a";
-        ctx.fillRect(x + 6, y + 8, 3, 3);
-        ctx.fillRect(x + 18, y + 18, 3, 3);
+        // soft green undertone flecks
+        ctx.fillStyle = "#c0c8b4";
+        ctx.fillRect(x + 5, y + 7, 3, 3);
+        ctx.fillRect(x + 18, y + 16, 3, 3);
+        ctx.fillStyle = "#f2a0b8";
+        ctx.fillRect(x + 12, y + 20, 2, 2);
         break;
       case TILE.FLOWER:
-        ctx.fillStyle = checker ? "#4f8f45" : "#45853c";
+        ctx.fillStyle = checker ? "#d8b8c4" : "#d0b0bc";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#f0d78c";
-        ctx.fillRect(x + 10, y + 10, 4, 4);
-        ctx.fillStyle = "#e07a3a";
-        ctx.fillRect(x + 20, y + 16, 4, 4);
-        ctx.fillStyle = "#c86ec8";
-        ctx.fillRect(x + 8, y + 20, 3, 3);
+        // sakura clusters
+        ctx.fillStyle = "#ffb7c8";
+        ctx.fillRect(x + 8, y + 8, 5, 5);
+        ctx.fillStyle = "#fff0f5";
+        ctx.fillRect(x + 10, y + 10, 2, 2);
+        ctx.fillStyle = "#e891b0";
+        ctx.fillRect(x + 18, y + 14, 5, 5);
+        ctx.fillStyle = "#fff8fb";
+        ctx.fillRect(x + 20, y + 16, 2, 2);
+        ctx.fillStyle = "#d4688a";
+        ctx.fillRect(x + 6, y + 20, 4, 4);
         break;
       case TILE.PATH:
-        ctx.fillStyle = checker ? "#c9a66b" : "#b8925a";
+        ctx.fillStyle = checker ? "#e8d0b8" : "#dec4a8";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#a67c48";
+        ctx.fillStyle = "#c8a888";
         ctx.fillRect(x + 4, y + 12, 2, 2);
         ctx.fillRect(x + 20, y + 6, 2, 2);
+        ctx.fillStyle = "#f2a0b8";
+        if ((tx + ty) % 5 === 0) ctx.fillRect(x + 14, y + 18, 2, 2);
         break;
       case TILE.TALL: {
-        ctx.fillStyle = checker ? "#3f7a38" : "#376f31";
+        ctx.fillStyle = checker ? "#c8a0b0" : "#c098a8";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
         const wave = Math.sin(state.grassWave + tx * 0.7 + ty * 0.5) * 2;
-        ctx.fillStyle = "#2d5f28";
         for (let i = 0; i < 4; i++) {
           const gx = x + 4 + i * 7 + wave;
+          ctx.fillStyle = "#9a7088";
           ctx.fillRect(gx, y + 8, 3, 20);
-          ctx.fillStyle = "#5aa34f";
-          ctx.fillRect(gx, y + 6, 3, 6);
-          ctx.fillStyle = "#2d5f28";
+          ctx.fillStyle = "#e891b0";
+          ctx.fillRect(gx, y + 5, 3, 7);
+          ctx.fillStyle = "#fff0f5";
+          ctx.fillRect(gx + 1, y + 4, 1, 2);
         }
         break;
       }
-      case TILE.TREE:
-        ctx.fillStyle = "#2a5a32";
+      case TILE.TREE: {
+        // fluffy cherry blossom tree
+        ctx.fillStyle = "#cbb8bc";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#5a3a1e";
-        ctx.fillRect(x + 12, y + 18, 8, 12);
-        ctx.fillStyle = "#2f6b38";
-        ctx.fillRect(x + 4, y + 4, 24, 18);
-        ctx.fillStyle = "#3f8a48";
-        ctx.fillRect(x + 8, y + 2, 16, 10);
+        ctx.fillStyle = "#6b3f48";
+        ctx.fillRect(x + 13, y + 18, 6, 12);
+        ctx.fillStyle = "#8b5a64";
+        ctx.fillRect(x + 14, y + 18, 2, 8);
+        // layered fluffy canopy
+        ctx.fillStyle = "#c45f84";
+        ctx.fillRect(x + 1, y + 6, 30, 14);
+        ctx.fillStyle = "#e891b0";
+        ctx.fillRect(x + 3, y + 3, 26, 14);
+        ctx.fillStyle = "#ffb7c8";
+        ctx.fillRect(x + 6, y + 1, 20, 12);
+        ctx.fillStyle = "#fff0f5";
+        ctx.fillRect(x + 9, y + 4, 5, 4);
+        ctx.fillRect(x + 17, y + 7, 4, 3);
+        ctx.fillStyle = "#d4688a";
+        ctx.fillRect(x + 4, y + 12, 3, 3);
+        ctx.fillRect(x + 22, y + 10, 3, 3);
         break;
+      }
       case TILE.WATER: {
-        ctx.fillStyle = "#3a7aa0";
+        ctx.fillStyle = "#a8c0d8";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
         const w = Math.sin(state.grassWave * 1.5 + tx + ty) * 2;
-        ctx.fillStyle = "#5aa0c8";
+        ctx.fillStyle = "#c0d8ec";
         ctx.fillRect(x + 4, y + 10 + w, 10, 3);
         ctx.fillRect(x + 16, y + 18 - w, 10, 3);
+        // lily pad
+        if ((tx + ty) % 2 === 0) {
+          ctx.fillStyle = "#8eb878";
+          ctx.fillRect(x + 10, y + 12, 8, 5);
+          ctx.fillStyle = "#f2a0b8";
+          ctx.fillRect(x + 12, y + 11, 3, 3);
+        }
         break;
       }
       case TILE.ROCK:
-        ctx.fillStyle = checker ? "#4f8f45" : "#45853c";
+        ctx.fillStyle = checker ? "#d4c0c4" : "#cbb8bc";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = "#7a6a58";
+        ctx.fillStyle = "#a89080";
         ctx.fillRect(x + 6, y + 10, 20, 14);
-        ctx.fillStyle = "#9a8a78";
+        ctx.fillStyle = "#c8b4a4";
         ctx.fillRect(x + 8, y + 8, 16, 8);
-        ctx.fillStyle = "#5a4a3a";
-        ctx.fillRect(x + 10, y + 18, 4, 3);
+        ctx.fillStyle = "#8aaa70";
+        ctx.fillRect(x + 10, y + 10, 4, 3);
+        ctx.fillStyle = "#e891b0";
+        ctx.fillRect(x + 18, y + 12, 3, 3);
         break;
       default:
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = "#c4a0b0";
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    }
+  }
+
+  function drawPetals() {
+    const t = state.animTime;
+    for (let i = 0; i < 14; i++) {
+      const x = ((i * 97 + t * (12 + (i % 5))) % (canvas.width + 20)) - 10;
+      const y = ((i * 53 + t * (8 + (i % 3)) + Math.sin(t + i) * 20) % (canvas.height + 20));
+      const size = 2 + (i % 3);
+      ctx.fillStyle = i % 2 === 0 ? "#ffb7c8" : "#fff0f5";
+      ctx.globalAlpha = 0.55;
+      ctx.fillRect(x, y, size, size);
+      ctx.globalAlpha = 1;
     }
   }
 
   function drawWorld() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // sky-ish top vignette feel via darker border trees already in map
     for (let y = 0; y < MAP_H; y++) {
       for (let x = 0; x < MAP_W; x++) {
         drawTile(x, y, getTile(x, y));
       }
     }
 
-    // route sign near start
-    ctx.fillStyle = "#6b4a2e";
+    // route sign
+    ctx.fillStyle = "#6b3f48";
     ctx.fillRect(3 * TILE_SIZE + 10, 1 * TILE_SIZE + 8, 4, 18);
-    ctx.fillStyle = "#f0d78c";
+    ctx.fillStyle = "#fff0f5";
     ctx.fillRect(3 * TILE_SIZE + 2, 1 * TILE_SIZE + 4, 20, 12);
-    ctx.fillStyle = "#1c2419";
-    ctx.font = "bold 7px Nunito, sans-serif";
-    ctx.fillText("R1", 3 * TILE_SIZE + 7, 1 * TILE_SIZE + 13);
+    ctx.strokeStyle = "#c45f84";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(3 * TILE_SIZE + 2, 1 * TILE_SIZE + 4, 20, 12);
+    ctx.fillStyle = "#5c3040";
+    ctx.font = "bold 7px Quicksand, sans-serif";
+    ctx.fillText("B1", 3 * TILE_SIZE + 7, 1 * TILE_SIZE + 13);
+
+    drawPetals();
 
     const p = state.player;
     drawPlayer(ctx, p.px, p.py, p.facing, p.step);
 
-    // soft vignette
-    const g = ctx.createRadialGradient(320, 240, 120, 320, 240, 420);
+    // soft rose vignette
+    const g = ctx.createRadialGradient(320, 240, 140, 320, 240, 420);
     g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(10,20,12,0.35)");
+    g.addColorStop(1, "rgba(90, 48, 64, 0.22)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }

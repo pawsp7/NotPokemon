@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Routewild — Catch the Five</title>
+  <title>Routewild — Blossom Route</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -26,22 +26,21 @@
     <main class="stage">
       <canvas id="game" width="640" height="480" aria-label="Routewild game canvas"></canvas>
 
-      <!-- Title -->
       <section id="screen-title" class="overlay screen">
         <div class="panel title-panel">
-          <p class="eyebrow">A tiny field adventure</p>
+          <p class="eyebrow">Blossom Route</p>
           <h2>Routewild</h2>
-          <p class="lede">One quiet route. Five wild creatures. Catch them all.</p>
+          <p class="lede">Soft petals, quiet paths, and five floral creatures waiting in the tall grass.</p>
           <button id="btn-start" type="button" class="cta">Start Adventure</button>
           <p class="hint">Move with WASD / Arrow keys · E opens Dex</p>
         </div>
       </section>
 
-      <!-- Battle -->
       <section id="screen-battle" class="overlay screen hidden" aria-hidden="true">
         <div class="battle-layout">
           <div class="battle-sky">
-            <canvas id="battle-sprite" width="160" height="160"></canvas>
+            <div class="petal-fall" aria-hidden="true"></div>
+            <canvas id="battle-sprite" width="192" height="192"></canvas>
             <div class="battle-nameplate">
               <strong id="battle-name">Creature</strong>
               <span id="battle-type" class="type-tag">Type</span>
@@ -55,31 +54,29 @@
         </div>
       </section>
 
-      <!-- Dex -->
       <section id="screen-dex" class="overlay screen hidden" aria-hidden="true">
         <div class="panel dex-panel">
           <div class="dex-head">
-            <h2>Field Dex</h2>
+            <h2>Blossom Dex</h2>
             <button id="btn-dex-close" type="button" class="ghost">Close</button>
           </div>
           <ul id="dex-list" class="dex-list"></ul>
         </div>
       </section>
 
-      <!-- Win -->
       <section id="screen-win" class="overlay screen hidden" aria-hidden="true">
         <div class="panel title-panel">
           <p class="eyebrow">Route complete</p>
           <h2>All Five Caught!</h2>
-          <p class="lede">You documented every creature on Meadow Route.</p>
+          <p class="lede">Every blossom creature on the route is now in your Dex.</p>
           <button id="btn-replay" type="button" class="cta">Play Again</button>
         </div>
       </section>
     </main>
 
     <footer class="helpbar">
-      <span>Meadow Route · Tall grass hides wild creatures</span>
-      <span id="msg">Explore the path and step into the grass.</span>
+      <span>Blossom Route · Petals hide wild creatures</span>
+      <span id="msg">Wander the path and step into the blossom grass.</span>
     </footer>
   </div>
 
