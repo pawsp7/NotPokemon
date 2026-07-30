@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Routewild — Catch the Five</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>Routewild</h1>
+      </div>
+      <div class="hud">
+        <span id="orb-count" class="hud-pill">Orbs: 20</span>
+        <span id="caught-count" class="hud-pill">Caught: 0/5</span>
+        <button id="btn-dex" type="button" class="hud-btn">Dex</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="game" width="640" height="480" aria-label="Routewild game canvas"></canvas>
+
+      <!-- Title -->
+      <section id="screen-title" class="overlay screen">
+        <div class="panel title-panel">
+          <p class="eyebrow">A tiny field adventure</p>
+          <h2>Routewild</h2>
+          <p class="lede">One quiet route. Five wild creatures. Catch them all.</p>
+          <button id="btn-start" type="button" class="cta">Start Adventure</button>
+          <p class="hint">Move with WASD / Arrow keys · E opens Dex</p>
+        </div>
+      </section>
+
+      <!-- Battle -->
+      <section id="screen-battle" class="overlay screen hidden" aria-hidden="true">
+        <div class="battle-layout">
+          <div class="battle-sky">
+            <canvas id="battle-sprite" width="160" height="160"></canvas>
+            <div class="battle-nameplate">
+              <strong id="battle-name">Creature</strong>
+              <span id="battle-type" class="type-tag">Type</span>
+            </div>
+          </div>
+          <div class="battle-log" id="battle-log">A wild creature appeared!</div>
+          <div class="battle-actions">
+            <button id="btn-throw" type="button" class="cta">Throw Orb</button>
+            <button id="btn-flee" type="button" class="ghost">Flee</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dex -->
+      <section id="screen-dex" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel dex-panel">
+          <div class="dex-head">
+            <h2>Field Dex</h2>
+            <button id="btn-dex-close" type="button" class="ghost">Close</button>
+          </div>
+          <ul id="dex-list" class="dex-list"></ul>
+        </div>
+      </section>
+
+      <!-- Win -->
+      <section id="screen-win" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel title-panel">
+          <p class="eyebrow">Route complete</p>
+          <h2>All Five Caught!</h2>
+          <p class="lede">You documented every creature on Meadow Route.</p>
+          <button id="btn-replay" type="button" class="cta">Play Again</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="helpbar">
+      <span>Meadow Route · Tall grass hides wild creatures</span>
+      <span id="msg">Explore the path and step into the grass.</span>
+    </footer>
+  </div>
+
+  <script src="js/creatures.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
