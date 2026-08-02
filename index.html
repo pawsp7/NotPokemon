@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=rpg2" />
+  <link rel="stylesheet" href="css/style.css?v=exp3" />
 </head>
 <body>
   <div id="app">
@@ -20,8 +20,10 @@
         <span id="loc-pill" class="hud-pill">Petalvale</span>
         <span id="money-count" class="hud-pill">❀ 80</span>
         <span id="orb-count" class="hud-pill">Orbs: 15</span>
-        <span id="caught-count" class="hud-pill">Dex: 0/10</span>
+        <span id="caught-count" class="hud-pill">Dex: 0/15</span>
         <button id="btn-party" type="button" class="hud-btn">Party</button>
+        <button id="btn-skills" type="button" class="hud-btn">Skills</button>
+        <button id="btn-style" type="button" class="hud-btn">Style</button>
         <button id="btn-bag" type="button" class="hud-btn">Bag</button>
         <button id="btn-dex" type="button" class="hud-btn">Dex</button>
       </div>
@@ -30,32 +32,27 @@
     <main class="stage">
       <canvas id="game" width="640" height="480" aria-label="Routewild game canvas"></canvas>
 
-      <!-- Title / starter pick -->
       <section id="screen-title" class="overlay screen">
         <div class="panel title-panel">
           <p class="eyebrow">Petalvale Adventures</p>
           <h2>Routewild</h2>
-          <p class="lede">Explore town, routes, and a misty grove. Raise a party of floral creatures.</p>
+          <p class="lede">Customize your look, raise skills, tend a pen, and explore shore mists.</p>
           <div id="starter-pick" class="starter-row">
             <button type="button" class="starter-card" data-starter="bloomvu">
-              <img src="assets/creatures/bloomvu.png" alt="Bloomvu" />
-              <span>Bloomvu</span>
+              <img src="assets/creatures/bloomvu.png" alt="Bloomvu" /><span>Bloomvu</span>
             </button>
             <button type="button" class="starter-card" data-starter="fernkit">
-              <img src="assets/creatures/fernkit.png" alt="Fernkit" />
-              <span>Fernkit</span>
+              <img src="assets/creatures/fernkit.png" alt="Fernkit" /><span>Fernkit</span>
             </button>
             <button type="button" class="starter-card" data-starter="lilypurr">
-              <img src="assets/creatures/lilypurr.png" alt="Lilypurr" />
-              <span>Lilypurr</span>
+              <img src="assets/creatures/lilypurr.png" alt="Lilypurr" /><span>Lilypurr</span>
             </button>
           </div>
           <button id="btn-start" type="button" class="cta" disabled>Choose a starter</button>
-          <p class="hint">WASD / Arrows move · Space talk · P party · B bag · E dex</p>
+          <p class="hint">WASD move · Space talk · P party · K skills · C style · B bag · E dex</p>
         </div>
       </section>
 
-      <!-- Dialogue -->
       <section id="screen-dialogue" class="overlay screen hidden" aria-hidden="true">
         <div class="panel dialogue-panel">
           <p class="npc-name" id="dlg-name">NPC</p>
@@ -64,19 +61,21 @@
         </div>
       </section>
 
-      <!-- Shop -->
       <section id="screen-shop" class="overlay screen hidden" aria-hidden="true">
         <div class="panel shop-panel">
           <div class="dex-head">
             <h2>Petal Shop</h2>
             <button id="btn-shop-close" type="button" class="ghost">Close</button>
           </div>
+          <div class="dex-tabs">
+            <button type="button" class="ghost shop-tab active" data-shop="items">Supplies</button>
+            <button type="button" class="ghost shop-tab" data-shop="style">Boutique</button>
+          </div>
           <p class="shop-money" id="shop-money">Your petals: 80</p>
           <ul id="shop-list" class="shop-list"></ul>
         </div>
       </section>
 
-      <!-- Party -->
       <section id="screen-party" class="overlay screen hidden" aria-hidden="true">
         <div class="panel party-panel">
           <div class="dex-head">
@@ -84,11 +83,57 @@
             <button id="btn-party-close" type="button" class="ghost">Close</button>
           </div>
           <ul id="party-list" class="party-list"></ul>
-          <p class="hint">Lead creature fights first. Click to set lead.</p>
+          <p class="hint">Click to set lead. Deposit extras at the Creature Pen.</p>
         </div>
       </section>
 
-      <!-- Bag -->
+      <section id="screen-skills" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel party-panel">
+          <div class="dex-head">
+            <h2>Skills</h2>
+            <button id="btn-skills-close" type="button" class="ghost">Close</button>
+          </div>
+          <div id="skills-body"></div>
+        </div>
+      </section>
+
+      <section id="screen-style" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel shop-panel">
+          <div class="dex-head">
+            <h2>Style Closet</h2>
+            <button id="btn-style-close" type="button" class="ghost">Close</button>
+          </div>
+          <div class="style-preview">
+            <canvas id="style-preview" width="128" height="128"></canvas>
+            <div>
+              <p id="style-summary">Outfit · Accessory</p>
+              <p class="hint">Unlock looks via Boutique or achievements.</p>
+            </div>
+          </div>
+          <h3 class="subhead">Outfits</h3>
+          <ul id="outfit-list" class="shop-list"></ul>
+          <h3 class="subhead">Accessories</h3>
+          <ul id="accessory-list" class="shop-list"></ul>
+          <h3 class="subhead">Achievements</h3>
+          <ul id="achieve-list" class="shop-list"></ul>
+        </div>
+      </section>
+
+      <section id="screen-pen" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel shop-panel">
+          <div class="dex-head">
+            <h2>Creature Pen</h2>
+            <button id="btn-pen-close" type="button" class="ghost">Close</button>
+          </div>
+          <div class="dex-tabs">
+            <button type="button" class="ghost pen-tab active" data-pen="storage">In Pen</button>
+            <button type="button" class="ghost pen-tab" data-pen="party">From Party</button>
+            <button type="button" class="ghost pen-tab" data-pen="dex">Dex View</button>
+          </div>
+          <ul id="pen-list" class="party-list"></ul>
+        </div>
+      </section>
+
       <section id="screen-bag" class="overlay screen hidden" aria-hidden="true">
         <div class="panel bag-panel">
           <div class="dex-head">
@@ -103,7 +148,6 @@
         </div>
       </section>
 
-      <!-- Battle -->
       <section id="screen-battle" class="overlay screen hidden" aria-hidden="true">
         <div class="battle-layout">
           <div class="battle-sky">
@@ -139,7 +183,6 @@
         </div>
       </section>
 
-      <!-- Dex -->
       <section id="screen-dex" class="overlay screen hidden" aria-hidden="true">
         <div class="panel dex-panel">
           <div class="dex-head">
@@ -150,32 +193,33 @@
             <button type="button" class="ghost dex-tab active" data-area="all">All</button>
             <button type="button" class="ghost dex-tab" data-area="route">Route</button>
             <button type="button" class="ghost dex-tab" data-area="grove">Grove</button>
+            <button type="button" class="ghost dex-tab" data-area="shore">Shore</button>
           </div>
           <ul id="dex-list" class="dex-list"></ul>
         </div>
       </section>
 
-      <!-- Win -->
       <section id="screen-win" class="overlay screen hidden" aria-hidden="true">
         <div class="panel title-panel">
           <p class="eyebrow">Legend of Petalvale</p>
-          <h2>All Ten Caught!</h2>
-          <p class="lede">You documented every blossom creature across town’s wilds.</p>
+          <h2>All Fifteen Caught!</h2>
+          <p class="lede">Every blossom creature across route, grove, and shore is in your Dex.</p>
           <button id="btn-replay" type="button" class="cta">Play Again</button>
         </div>
       </section>
     </main>
 
     <footer class="helpbar">
-      <span id="area-hint">Petalvale · Heal, shop, then head south</span>
+      <span id="area-hint">Petalvale · Heal, shop, style, then head south</span>
       <span id="msg">Choose a starter to begin.</span>
     </footer>
   </div>
 
-  <script src="js/creatures.js?v=rpg2"></script>
-  <script src="js/maps.js?v=rpg2"></script>
-  <script src="js/rpg.js?v=rpg2"></script>
-  <script src="js/sprites.js?v=rpg2"></script>
-  <script src="js/game.js?v=rpg2"></script>
+  <script src="js/creatures.js?v=exp3"></script>
+  <script src="js/maps.js?v=exp3"></script>
+  <script src="js/rpg.js?v=exp3"></script>
+  <script src="js/cosmetics.js?v=exp3"></script>
+  <script src="js/sprites.js?v=exp3"></script>
+  <script src="js/game.js?v=exp3"></script>
 </body>
 </html>

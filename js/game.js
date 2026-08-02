@@ -5,12 +5,17 @@
   const battleCtx = battleCanvas.getContext("2d");
   const allyCanvas = document.getElementById("ally-sprite");
   const allyCtx = allyCanvas.getContext("2d");
+  const styleCanvas = document.getElementById("style-preview");
+  const styleCtx = styleCanvas.getContext("2d");
 
   const screens = {
     title: document.getElementById("screen-title"),
     dialogue: document.getElementById("screen-dialogue"),
     shop: document.getElementById("screen-shop"),
     party: document.getElementById("screen-party"),
+    skills: document.getElementById("screen-skills"),
+    style: document.getElementById("screen-style"),
+    pen: document.getElementById("screen-pen"),
     bag: document.getElementById("screen-bag"),
     battle: document.getElementById("screen-battle"),
     dex: document.getElementById("screen-dex"),
@@ -44,6 +49,12 @@
     dlgName: document.getElementById("dlg-name"),
     dlgText: document.getElementById("dlg-text"),
     btnStart: document.getElementById("btn-start"),
+    skillsBody: document.getElementById("skills-body"),
+    outfitList: document.getElementById("outfit-list"),
+    accessoryList: document.getElementById("accessory-list"),
+    achieveList: document.getElementById("achieve-list"),
+    styleSummary: document.getElementById("style-summary"),
+    penList: document.getElementById("pen-list"),
   };
 
   const state = {
@@ -55,21 +66,28 @@
     money: 80,
     inventory: defaultInventory(),
     party: [],
+    storage: [],
     dex: new Set(),
+    cosmetics: defaultCosmetics(),
     starter: null,
+    battlesWon: 0,
     encounterCooldown: 0,
     wild: null,
     battleBusy: false,
     dialogue: null,
     bagItem: null,
     dexFilter: "all",
+    shopTab: "items",
+    penTab: "storage",
     animTime: 0,
     grassWave: 0,
     petals: [],
+    selectedSkillUid: null,
   };
 
   window.__currentMapId = "town";
-  const MOVE_DURATION = 0.14;
+  const MOVE_DURATION = 0.12;
+  const TOTAL_CREATURES = 15;
 
   for (let i = 0; i < 24; i++) {
     state.petals.push({
@@ -111,28 +129,34 @@
     return Math.round(state.party.reduce((s, m) => s + m.level, 0) / state.party.length);
   }
 
+  function notifyAchievements() {
+    const newly = evaluateAchievements(state);
+    if (newly.length) {
+      const names = newly.map((a) => a.name).join(", ");
+      setMsg(`Achievement unlocked: ${names}!`);
+    }
+  }
+
   function updateHud() {
     const map = getMap(state.mapId);
     ui.loc.textContent = map?.name || state.mapId;
     ui.money.textContent = `❀ ${state.money}`;
     ui.orbs.textContent = `Orbs: ${state.inventory.orb}`;
-    ui.caught.textContent = `Dex: ${state.dex.size}/10`;
-    ui.areaHint.textContent =
-      state.mapId === "town"
-        ? "Petalvale · Space to talk · South to Blossom Route"
-        : state.mapId === "route"
-          ? "Blossom Route · Tall grass · East to Mist Grove"
-          : "Mist Grove · Rare blooms in the mist";
+    ui.caught.textContent = `Dex: ${state.dex.size}/${TOTAL_CREATURES}`;
+    const hints = {
+      town: "Petalvale · Space talk · East to Pen · South to Route",
+      route: "Blossom Route · East Grove · South Shore",
+      grove: "Mist Grove · Spend skill points after leveling",
+      shore: "Tidebloom Shore · Five coastal blooms",
+      pen: "Creature Pen · Space on Keeper to manage storage",
+    };
+    ui.areaHint.textContent = hints[state.mapId] || map?.name || "";
   }
 
   function placePlayer(x, y) {
     const p = state.player;
-    p.x = x;
-    p.y = y;
-    p.tx = x;
-    p.ty = y;
-    p.px = x * TILE_SIZE;
-    p.py = y * TILE_SIZE;
+    p.x = x; p.y = y; p.tx = x; p.ty = y;
+    p.px = x * TILE_SIZE; p.py = y * TILE_SIZE;
     p.moving = false;
   }
 
@@ -151,22 +175,23 @@
     state.money = 80;
     state.inventory = defaultInventory();
     state.party = [makePartyMember(state.starter, 5)];
+    state.storage = [];
     state.dex = new Set([state.starter]);
+    state.cosmetics = defaultCosmetics();
+    state.battlesWon = 0;
     state.wild = null;
     state.battleBusy = false;
     state.dialogue = null;
-    state.bagItem = null;
     enterMap("town");
     state.mode = "play";
     hideOverlays();
-    setMsg(`${getCreatureById(state.starter).name} joins you! Talk to townsfolk, then head south.`);
+    setMsg(`${getCreatureById(state.starter).name} joins you! Visit the Pen, Style closet, and head south.`);
     updateHud();
   }
 
   function facingTile() {
     const p = state.player;
-    let x = p.x;
-    let y = p.y;
+    let x = p.x, y = p.y;
     if (p.facing === "up") y -= 1;
     if (p.facing === "down") y += 1;
     if (p.facing === "left") x -= 1;
@@ -184,32 +209,32 @@
     else if (dy > 0) p.facing = "down";
     else if (dy < 0) p.facing = "up";
 
-    // warp standing on edge tiles handled after step; also allow stepping onto warp
     if (npcAt(state.mapId, nx, ny)) {
       setMsg("Press Space to talk.");
       return;
     }
-    if (isSolid(getTileOn(state.mapId, nx, ny))) {
-      // allow warp tiles even if mapped oddly
-      if (!warpAt(state.mapId, nx, ny)) {
-        setMsg("Something blocks the way.");
-        return;
-      }
+
+    // hitbox-aware: check destination pixel occupancy
+    const destPx = nx * TILE_SIZE;
+    const destPy = ny * TILE_SIZE;
+    const isWarp = !!warpAt(state.mapId, nx, ny);
+    if (!isWarp && !canOccupyPixels(state.mapId, destPx, destPy)) {
+      setMsg("Something blocks the way.");
+      return;
+    }
+    if (!isWarp && tileBlocked(state.mapId, nx, ny) && !warpAt(state.mapId, nx, ny)) {
+      setMsg("Something blocks the way.");
+      return;
     }
 
     p.moving = true;
-    p.tx = nx;
-    p.ty = ny;
-    p.t = 0;
-    p.step += 1;
+    p.tx = nx; p.ty = ny; p.t = 0; p.step += 1;
   }
 
   function finishStep() {
     const p = state.player;
-    p.x = p.tx;
-    p.y = p.ty;
-    p.px = p.x * TILE_SIZE;
-    p.py = p.y * TILE_SIZE;
+    p.x = p.tx; p.y = p.ty;
+    p.px = p.x * TILE_SIZE; p.py = p.y * TILE_SIZE;
     p.moving = false;
 
     const warp = warpAt(state.mapId, p.x, p.y);
@@ -221,11 +246,8 @@
 
     const map = getMap(state.mapId);
     if (!map.encounter || state.encounterCooldown > 0) return;
-    if (isTallGrassOn(state.mapId, p.x, p.y) && Math.random() < 0.22) {
-      startBattle();
-    } else if (isTallGrassOn(state.mapId, p.x, p.y)) {
-      setMsg("The grass whispers…");
-    }
+    if (isTallGrassOn(state.mapId, p.x, p.y) && Math.random() < 0.22) startBattle();
+    else if (isTallGrassOn(state.mapId, p.x, p.y)) setMsg("The grass whispers…");
   }
 
   function interact() {
@@ -233,6 +255,19 @@
     const { x, y } = facingTile();
     const npc = npcAt(state.mapId, x, y) || npcAt(state.mapId, state.player.x, state.player.y);
     if (!npc) {
+      // pen creature view
+      if (state.mapId === "pen") {
+        const slot = getMap("pen").pens.find((s) => s.x === x && s.y === y);
+        if (slot) {
+          const idx = getMap("pen").pens.indexOf(slot);
+          const stored = state.storage[idx];
+          if (stored) {
+            const sp = getCreatureById(stored.id);
+            setMsg(`${sp.name} Lv.${stored.level} rests happily in the pen.`);
+            return;
+          }
+        }
+      }
       setMsg("Nothing to talk to.");
       return;
     }
@@ -255,16 +290,17 @@
       ui.dlgText.textContent = npc.lines[state.dialogue.i];
       return;
     }
-    // finished lines → action
     hideOverlays();
     if (npc.kind === "heal") {
-      state.party.forEach((m) => {
-        m.hp = m.maxHp;
-      });
+      state.party.forEach((m) => { m.hp = m.maxHp; });
       setMsg("Your party was fully healed at the Petal Shrine.");
       state.mode = "play";
     } else if (npc.kind === "shop") {
       openShop();
+    } else if (npc.kind === "style") {
+      openStyle();
+    } else if (npc.kind === "pen") {
+      openPen();
     } else {
       state.mode = "play";
       setMsg(`${npc.name} nods kindly.`);
@@ -274,38 +310,76 @@
 
   function openShop() {
     state.mode = "shop";
-    ui.shopMoney.textContent = `Your petals: ${state.money}`;
-    ui.shopList.innerHTML = "";
-    SHOP_ITEMS.forEach((item) => {
-      const li = document.createElement("li");
-      li.className = "shop-item";
-      li.innerHTML = `<div><strong>${item.name}</strong><p class="hint" style="margin:0.2rem 0 0">${item.desc}</p></div>`;
-      const btn = document.createElement("button");
-      btn.className = "cta";
-      btn.style.minWidth = "90px";
-      btn.textContent = `${item.price}❀`;
-      btn.onclick = () => buyItem(item);
-      li.appendChild(btn);
-      ui.shopList.appendChild(li);
-    });
+    state.shopTab = "items";
+    document.querySelectorAll(".shop-tab").forEach((t) => t.classList.toggle("active", t.dataset.shop === "items"));
+    renderShop();
     showScreen("shop");
   }
 
-  function buyItem(item) {
-    if (state.money < item.price) {
-      setMsg("Not enough petals.");
-      return;
-    }
-    state.money -= item.price;
-    state.inventory[item.id] = (state.inventory[item.id] || 0) + 1;
+  function renderShop() {
     ui.shopMoney.textContent = `Your petals: ${state.money}`;
-    updateHud();
-    setMsg(`Bought ${item.name}.`);
+    ui.shopList.innerHTML = "";
+    if (state.shopTab === "items") {
+      SHOP_ITEMS.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "shop-item";
+        li.innerHTML = `<div><strong>${item.name}</strong><p class="hint" style="margin:0.2rem 0 0">${item.desc}</p></div>`;
+        const btn = document.createElement("button");
+        btn.className = "cta";
+        btn.style.minWidth = "90px";
+        btn.textContent = `${item.price}❀`;
+        btn.onclick = () => {
+          if (state.money < item.price) return setMsg("Not enough petals.");
+          state.money -= item.price;
+          state.inventory[item.id] = (state.inventory[item.id] || 0) + 1;
+          updateHud();
+          renderShop();
+          setMsg(`Bought ${item.name}.`);
+        };
+        li.appendChild(btn);
+        ui.shopList.appendChild(li);
+      });
+    } else {
+      [...OUTFITS, ...ACCESSORIES]
+        .filter((o) => o.unlock === "shop")
+        .forEach((item) => {
+          const isOutfit = !!OUTFITS.find((o) => o.id === item.id);
+          const owned = isOutfit
+            ? isOutfitUnlocked(state.cosmetics, item.id)
+            : isAccessoryUnlocked(state.cosmetics, item.id);
+          const li = document.createElement("li");
+          li.className = "shop-item";
+          const thumb = isOutfit
+            ? `assets/world/player_${item.id}.png`
+            : `assets/cosmetics/${item.id}.png`;
+          li.innerHTML = `<div style="display:flex;gap:0.5rem;align-items:center"><img src="${thumb}" width="40" height="40" alt=""/><div><strong>${item.name}</strong><p class="hint" style="margin:0.2rem 0 0">${item.desc}</p></div></div>`;
+          const btn = document.createElement("button");
+          btn.className = owned ? "ghost" : "cta";
+          btn.style.minWidth = "90px";
+          btn.textContent = owned ? "Owned" : `${item.price}❀`;
+          btn.disabled = owned;
+          btn.onclick = () => {
+            if (state.money < item.price) return setMsg("Not enough petals.");
+            state.money -= item.price;
+            if (isOutfit) state.cosmetics.unlockedOutfits.push(item.id);
+            else state.cosmetics.unlockedAccessories.push(item.id);
+            updateHud();
+            renderShop();
+            setMsg(`Unlocked ${item.name}!`);
+          };
+          li.appendChild(btn);
+          ui.shopList.appendChild(li);
+        });
+    }
+  }
+
+  function closeMenuToPlay() {
+    state.mode = "play";
+    hideOverlays();
   }
 
   function openParty() {
     if (state.mode === "battle" || state.mode === "title") return;
-    state._prev = state.mode === "play" ? "play" : state.mode;
     state.mode = "party";
     renderParty();
     showScreen("party");
@@ -322,7 +396,7 @@
         <div>
           <strong>${sp.name}</strong> · Lv.${m.level}
           <div class="hp-bar"><i style="width:${Math.round((m.hp / m.maxHp) * 100)}%"></i></div>
-          <span>${m.hp}/${m.maxHp} HP · XP ${m.xp}/${xpToNext(m.level)}</span>
+          <span>${m.hp}/${m.maxHp} · Skills ${m.skillPoints || 0}</span>
         </div>
         <span class="type-tag type-${sp.type.toLowerCase()}">${sp.type}</span>`;
       li.onclick = () => {
@@ -336,6 +410,197 @@
     });
   }
 
+  function openSkills() {
+    if (state.mode === "battle" || state.mode === "title") return;
+    state.mode = "skills";
+    if (!state.selectedSkillUid && state.party[0]) state.selectedSkillUid = state.party[0].uid;
+    renderSkills();
+    showScreen("skills");
+  }
+
+  function renderSkills() {
+    const body = ui.skillsBody;
+    body.innerHTML = "";
+    if (!state.party.length) {
+      body.innerHTML = "<p>No party members.</p>";
+      return;
+    }
+    const tabs = document.createElement("div");
+    tabs.className = "dex-tabs";
+    state.party.forEach((m) => {
+      const sp = getCreatureById(m.id);
+      const b = document.createElement("button");
+      b.className = `ghost dex-tab${m.uid === state.selectedSkillUid ? " active" : ""}`;
+      b.textContent = sp.name;
+      b.onclick = () => { state.selectedSkillUid = m.uid; renderSkills(); };
+      tabs.appendChild(b);
+    });
+    body.appendChild(tabs);
+
+    const m = state.party.find((p) => p.uid === state.selectedSkillUid) || state.party[0];
+    state.selectedSkillUid = m.uid;
+    refreshMemberStats(m);
+    const sp = getCreatureById(m.id);
+    const box = document.createElement("div");
+    box.className = "skills-card";
+    box.innerHTML = `
+      <div class="skills-head">
+        <img src="${ASSET_URLS[m.id]}" width="64" height="64" alt=""/>
+        <div>
+          <strong>${sp.name}</strong> Lv.${m.level}<br/>
+          Points available: <b>${m.skillPoints || 0}</b><br/>
+          ATK ${memberAttack(m)} · DEF ${memberDefense(m)} · SPD ${memberSpeed(m)} · HP ${m.maxHp}
+        </div>
+      </div>`;
+    const rows = document.createElement("div");
+    rows.className = "skills-rows";
+    ["hp", "atk", "def", "spd"].forEach((key) => {
+      const row = document.createElement("div");
+      row.className = "skill-row";
+      row.innerHTML = `<span>${key.toUpperCase()} · ${m.skills[key] || 0}</span>`;
+      const btn = document.createElement("button");
+      btn.className = "cta";
+      btn.textContent = "+";
+      btn.disabled = !(m.skillPoints > 0);
+      btn.onclick = () => {
+        if (spendSkill(m, key)) {
+          setMsg(`Invested in ${sp.name}'s ${key.toUpperCase()}.`);
+          renderSkills();
+        }
+      };
+      row.appendChild(btn);
+      rows.appendChild(row);
+    });
+    box.appendChild(rows);
+    body.appendChild(box);
+  }
+
+  function openStyle() {
+    if (state.mode === "battle" || state.mode === "title") return;
+    state.mode = "style";
+    renderStyle();
+    showScreen("style");
+  }
+
+  function renderStyle() {
+    const cos = state.cosmetics;
+    const outfit = OUTFITS.find((o) => o.id === cos.outfit);
+    const acc = ACCESSORIES.find((a) => a.id === cos.accessory);
+    ui.styleSummary.textContent = `${outfit?.name || "—"} · ${acc?.name || "None"}`;
+    styleCtx.clearRect(0, 0, 128, 128);
+    styleCtx.fillStyle = "#f7d0dc";
+    styleCtx.fillRect(0, 0, 128, 128);
+    drawPlayer(styleCtx, 48, 48, "down", 0, cos.outfit, cos.accessory, state.animTime);
+
+    ui.outfitList.innerHTML = "";
+    OUTFITS.forEach((o) => {
+      const unlocked = isOutfitUnlocked(cos, o.id);
+      const li = document.createElement("li");
+      li.className = "shop-item";
+      li.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center"><img src="assets/world/player_${o.id}.png" width="40" height="40"/><div><strong>${o.name}</strong><p class="hint" style="margin:.2rem 0 0">${unlocked ? o.desc : "Locked — " + (o.unlock === "shop" ? "buy in Boutique" : "achievement")}</p></div></div>`;
+      const btn = document.createElement("button");
+      btn.className = cos.outfit === o.id ? "ghost" : "cta";
+      btn.textContent = !unlocked ? "Locked" : cos.outfit === o.id ? "Wearing" : "Wear";
+      btn.disabled = !unlocked || cos.outfit === o.id;
+      btn.onclick = () => { cos.outfit = o.id; renderStyle(); setMsg(`Wearing ${o.name}.`); };
+      li.appendChild(btn);
+      ui.outfitList.appendChild(li);
+    });
+
+    ui.accessoryList.innerHTML = "";
+    ACCESSORIES.forEach((a) => {
+      const unlocked = isAccessoryUnlocked(cos, a.id);
+      const li = document.createElement("li");
+      li.className = "shop-item";
+      li.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center"><img src="assets/cosmetics/${a.id}.png" width="40" height="40"/><div><strong>${a.name}</strong><p class="hint" style="margin:.2rem 0 0">${unlocked ? a.desc : "Locked"}</p></div></div>`;
+      const btn = document.createElement("button");
+      btn.className = cos.accessory === a.id ? "ghost" : "cta";
+      btn.textContent = !unlocked ? "Locked" : cos.accessory === a.id ? "Equipped" : "Equip";
+      btn.disabled = !unlocked || cos.accessory === a.id;
+      btn.onclick = () => { cos.accessory = a.id; renderStyle(); setMsg(`Equipped ${a.name}.`); };
+      li.appendChild(btn);
+      ui.accessoryList.appendChild(li);
+    });
+
+    ui.achieveList.innerHTML = "";
+    ACHIEVEMENTS.forEach((a) => {
+      const done = cos.unlockedAchievements.includes(a.id);
+      const li = document.createElement("li");
+      li.className = "shop-item";
+      li.innerHTML = `<div><strong>${done ? "✓ " : ""}${a.name}</strong><p class="hint" style="margin:.2rem 0 0">${a.desc}</p></div><span class="type-tag">${done ? "Done" : "…"}</span>`;
+      ui.achieveList.appendChild(li);
+    });
+  }
+
+  function openPen() {
+    if (state.mode === "battle" || state.mode === "title") return;
+    state.mode = "pen";
+    state.penTab = "storage";
+    document.querySelectorAll(".pen-tab").forEach((t) => t.classList.toggle("active", t.dataset.pen === "storage"));
+    renderPen();
+    showScreen("pen");
+  }
+
+  function renderPen() {
+    ui.penList.innerHTML = "";
+    if (state.penTab === "storage") {
+      if (!state.storage.length) {
+        ui.penList.innerHTML = `<li class="party-item"><div><strong>Pen is empty</strong><p class="hint">Deposit party creatures to store them.</p></div></li>`;
+        return;
+      }
+      state.storage.forEach((m, idx) => {
+        const sp = getCreatureById(m.id);
+        const li = document.createElement("li");
+        li.className = "party-item";
+        li.innerHTML = `<img src="${ASSET_URLS[m.id]}"/><div><strong>${sp.name}</strong> Lv.${m.level}<br/><span>${m.hp}/${m.maxHp} HP</span></div>`;
+        const btn = document.createElement("button");
+        btn.className = "cta";
+        btn.textContent = "Withdraw";
+        btn.onclick = () => {
+          if (state.party.length >= 3) return setMsg("Party is full (max 3).");
+          const [pulled] = state.storage.splice(idx, 1);
+          state.party.push(pulled);
+          notifyAchievements();
+          renderPen();
+          updateHud();
+          setMsg(`${sp.name} rejoined the party.`);
+        };
+        li.appendChild(btn);
+        ui.penList.appendChild(li);
+      });
+    } else if (state.penTab === "party") {
+      state.party.forEach((m, idx) => {
+        const sp = getCreatureById(m.id);
+        const li = document.createElement("li");
+        li.className = "party-item";
+        li.innerHTML = `<img src="${ASSET_URLS[m.id]}"/><div><strong>${sp.name}</strong> Lv.${m.level}</div>`;
+        const btn = document.createElement("button");
+        btn.className = "ghost";
+        btn.textContent = "Deposit";
+        btn.disabled = state.party.length <= 1;
+        btn.onclick = () => {
+          if (state.party.length <= 1) return setMsg("Keep at least one party member.");
+          if (state.storage.length >= 8) return setMsg("Pen stalls are full.");
+          const [dep] = state.party.splice(idx, 1);
+          state.storage.push(dep);
+          notifyAchievements();
+          renderPen();
+          updateHud();
+          setMsg(`${sp.name} rests in the Pen.`);
+        };
+        li.appendChild(btn);
+        ui.penList.appendChild(li);
+      });
+    } else {
+      CREATURES.filter((c) => state.dex.has(c.id)).forEach((c) => {
+        const li = document.createElement("li");
+        li.className = "party-item";
+        li.innerHTML = `<img src="${ASSET_URLS[c.id]}"/><div><strong>${c.name}</strong><p class="hint" style="margin:.2rem 0 0">${c.description}</p></div><span class="type-tag type-${c.type.toLowerCase()}">${c.type}</span>`;
+        ui.penList.appendChild(li);
+      });
+    }
+  }
+
   function openBag() {
     if (state.mode === "battle" || state.mode === "title") return;
     state.mode = "bag";
@@ -347,12 +612,11 @@
 
   function renderBag() {
     ui.bagList.innerHTML = "";
-    const entries = [
+    [
       { id: "orb", name: "Catch Orb", desc: "Catch wild creatures in battle." },
       { id: "potion", name: "Petal Tonic", desc: "Restore 28 HP." },
       { id: "hi_potion", name: "Bloom Balm", desc: "Restore 55 HP." },
-    ];
-    entries.forEach((item) => {
+    ].forEach((item) => {
       const count = state.inventory[item.id] || 0;
       const li = document.createElement("li");
       li.className = "shop-item";
@@ -361,43 +625,32 @@
         const btn = document.createElement("button");
         btn.className = "ghost";
         btn.textContent = "Use";
-        btn.onclick = () => chooseBagTarget(item.id);
+        btn.onclick = () => {
+          state.bagItem = item.id;
+          ui.bagTarget.classList.remove("hidden");
+          ui.bagTargets.innerHTML = "";
+          state.party.forEach((m) => {
+            const sp = getCreatureById(m.id);
+            const b = document.createElement("button");
+            b.className = "starter-card";
+            b.innerHTML = `<img src="${ASSET_URLS[m.id]}" alt=""/><span>${sp.name}</span>`;
+            b.onclick = () => {
+              const heal = item.id === "hi_potion" ? 55 : 28;
+              const before = m.hp;
+              m.hp = Math.min(m.maxHp, m.hp + heal);
+              state.inventory[item.id] -= 1;
+              setMsg(`${sp.name} recovered ${m.hp - before} HP.`);
+              ui.bagTarget.classList.add("hidden");
+              renderBag();
+              updateHud();
+            };
+            ui.bagTargets.appendChild(b);
+          });
+        };
         li.appendChild(btn);
       }
       ui.bagList.appendChild(li);
     });
-  }
-
-  function chooseBagTarget(itemId) {
-    state.bagItem = itemId;
-    ui.bagTarget.classList.remove("hidden");
-    ui.bagTargets.innerHTML = "";
-    state.party.forEach((m) => {
-      const sp = getCreatureById(m.id);
-      const btn = document.createElement("button");
-      btn.className = "starter-card";
-      btn.innerHTML = `<img src="${ASSET_URLS[m.id]}" alt=""/><span>${sp.name}</span>`;
-      btn.onclick = () => useItemOn(itemId, m);
-      ui.bagTargets.appendChild(btn);
-    });
-  }
-
-  function useItemOn(itemId, member) {
-    if ((state.inventory[itemId] || 0) <= 0) return;
-    const heal = itemId === "hi_potion" ? 55 : 28;
-    const before = member.hp;
-    member.hp = Math.min(member.maxHp, member.hp + heal);
-    state.inventory[itemId] -= 1;
-    setMsg(`${getCreatureById(member.id).name} recovered ${member.hp - before} HP.`);
-    state.bagItem = null;
-    ui.bagTarget.classList.add("hidden");
-    renderBag();
-    updateHud();
-  }
-
-  function closeMenuToPlay() {
-    state.mode = "play";
-    hideOverlays();
   }
 
   // ---- Battle ----
@@ -411,7 +664,6 @@
     state.mode = "battle";
     state.battleBusy = false;
     state.encounterCooldown = 0.9;
-
     ui.battleName.textContent = `${species.name} Lv.${state.wild.level}`;
     ui.battleType.textContent = species.type;
     ui.battleType.className = `type-tag type-${species.type.toLowerCase()}`;
@@ -432,7 +684,6 @@
     ui.allyHpFill.style.width = `${Math.round(ap * 100)}%`;
     ui.allyHpFill.classList.toggle("low", ap < 0.35);
     ui.allyHpText.textContent = `${ally.hp}/${ally.maxHp}`;
-
     const wp = Math.max(0, state.wild.hp / state.wild.maxHp);
     ui.foeHpFill.style.width = `${Math.round(wp * 100)}%`;
     ui.foeHpFill.classList.toggle("low", wp < 0.35);
@@ -442,13 +693,9 @@
   function drawBattleSprites(shakeX = 0) {
     battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
     allyCtx.clearRect(0, 0, allyCanvas.width, allyCanvas.height);
-    if (state.wild) {
-      drawCreature(battleCtx, state.wild.species, battleCanvas.width / 2 + shakeX, battleCanvas.height / 2 + 8, 1.05);
-    }
+    if (state.wild) drawCreature(battleCtx, state.wild.species, battleCanvas.width / 2 + shakeX, battleCanvas.height / 2 + 8, 1.05);
     const ally = lead();
-    if (ally) {
-      drawCreature(allyCtx, getCreatureById(ally.id), allyCanvas.width / 2, allyCanvas.height / 2 + 6, 0.85);
-    }
+    if (ally) drawCreature(allyCtx, getCreatureById(ally.id), allyCanvas.width / 2, allyCanvas.height / 2 + 6, 0.85);
   }
 
   function showMoves() {
@@ -480,13 +727,7 @@
     ui.moveActions.classList.add("hidden");
     const ally = lead();
     const sp = getCreatureById(ally.id);
-    const { dmg, mult } = damageAmount(
-      memberAttack(ally),
-      calcStat(state.wild.species.base.def, state.wild.level),
-      move,
-      move.type,
-      state.wild.species.type
-    );
+    const { dmg, mult } = damageAmount(memberAttack(ally), calcStat(state.wild.species.base.def, state.wild.level), move, move.type, state.wild.species.type);
     state.wild.hp = Math.max(0, state.wild.hp - dmg);
     let msg = `${sp.name} used ${move.name}! (${dmg})`;
     if (mult > 1) msg += " It's strong!";
@@ -494,34 +735,18 @@
     ui.battleLog.textContent = msg;
     updateBattleBars();
     drawBattleSprites();
-
-    setTimeout(() => {
-      if (state.wild.hp <= 0) {
-        winBattle();
-      } else {
-        foeTurn();
-      }
-    }, 650);
+    setTimeout(() => (state.wild.hp <= 0 ? winBattle() : foeTurn()), 650);
   }
 
   function foeTurn() {
     const ally = lead();
     const foe = state.wild;
     const move = foe.species.moves[Math.floor(Math.random() * foe.species.moves.length)];
-    const { dmg, mult } = damageAmount(
-      calcStat(foe.species.base.atk, foe.level),
-      memberDefense(ally),
-      move,
-      move.type,
-      getCreatureById(ally.id).type
-    );
+    const { dmg } = damageAmount(calcStat(foe.species.base.atk, foe.level), memberDefense(ally), move, move.type, getCreatureById(ally.id).type);
     ally.hp = Math.max(0, ally.hp - dmg);
-    let msg = `Wild ${foe.species.name} used ${move.name}! (${dmg})`;
-    if (mult > 1) msg += " Ouch!";
-    ui.battleLog.textContent = msg;
+    ui.battleLog.textContent = `Wild ${foe.species.name} used ${move.name}! (${dmg})`;
     updateBattleBars();
     drawBattleSprites();
-
     setTimeout(() => {
       if (ally.hp <= 0) {
         const next = state.party.find((m) => m.hp > 0);
@@ -529,13 +754,12 @@
           ui.battleLog.textContent = "Your party fainted… Returning to Petalvale.";
           setTimeout(() => {
             state.party.forEach((m) => (m.hp = Math.max(1, Math.floor(m.maxHp * 0.4))));
-            endBattle(false);
+            endBattle();
             enterMap("town");
             setMsg("You stumbled back to Petalvale to recover.");
           }, 900);
           return;
         }
-        // swap fainted lead
         const idx = state.party.indexOf(next);
         const [n] = state.party.splice(idx, 1);
         state.party.unshift(n);
@@ -554,14 +778,13 @@
     const xp = 8 + foe.level * 3;
     const money = 6 + foe.level * 2;
     state.money += money;
+    state.battlesWon += 1;
     const logs = gainXp(ally, xp);
     ui.battleLog.textContent = `Defeated ${foe.species.name}! +${xp} XP, +${money}❀`;
     if (logs[0]) ui.battleLog.textContent += " " + logs[0];
     updateHud();
-    setTimeout(() => {
-      endBattle(false);
-      setMsg(`Won! ${foe.species.name} fled into petals.`);
-    }, 900);
+    notifyAchievements();
+    setTimeout(() => { endBattle(); setMsg(`Won! ${foe.species.name} fled into petals.`); }, 900);
   }
 
   function tryCatch() {
@@ -575,12 +798,9 @@
     updateHud();
     ui.mainActions.classList.add("hidden");
     ui.battleLog.textContent = `You throw a Catch Orb at ${state.wild.species.name}…`;
-
-    const ratio = state.wild.hp / state.wild.maxHp;
-    const chance = catchChance(state.wild.species, ratio);
+    const chance = catchChance(state.wild.species, state.wild.hp / state.wild.maxHp);
     const success = Math.random() < chance;
     let shakes = 0;
-
     const iv = setInterval(() => {
       shakes += 1;
       drawBattleSprites((shakes % 2 === 0 ? 1 : -1) * 7);
@@ -592,19 +812,20 @@
           drawOrb(battleCtx, battleCanvas.width / 2, battleCanvas.height / 2);
           const sp = state.wild.species;
           state.dex.add(sp.id);
+          const member = makePartyMember(sp.id, state.wild.level);
           if (state.party.length < 3) {
-            state.party.push(makePartyMember(sp.id, state.wild.level));
+            state.party.push(member);
             ui.battleLog.textContent = `Gotcha! ${sp.name} joined your party!`;
+          } else if (state.storage.length < 8) {
+            state.storage.push(member);
+            ui.battleLog.textContent = `Gotcha! ${sp.name} was sent to the Creature Pen!`;
           } else {
-            // sent to dex storage flavor — still count, grant XP money
-            ui.battleLog.textContent = `Gotcha! ${sp.name} was recorded in the Dex! (party full)`;
+            ui.battleLog.textContent = `Gotcha! ${sp.name} recorded in Dex (party & pen full).`;
             state.money += 8;
           }
           updateHud();
-          setTimeout(() => {
-            endBattle(false);
-            checkWin();
-          }, 900);
+          notifyAchievements();
+          setTimeout(() => { endBattle(); checkWin(); }, 900);
         } else {
           ui.battleLog.textContent = `Oh no! ${state.wild.species.name} broke free!`;
           drawBattleSprites();
@@ -624,17 +845,17 @@
   }
 
   function checkWin() {
-    if (state.dex.size >= 10) {
+    if (state.dex.size >= TOTAL_CREATURES) {
       state.mode = "win";
       showScreen("win");
-      setMsg("All ten creatures documented!");
+      setMsg("All fifteen creatures documented!");
+      notifyAchievements();
     }
   }
 
   function renderDex() {
     ui.dexList.innerHTML = "";
-    const list = CREATURES.filter((c) => state.dexFilter === "all" || c.area === state.dexFilter);
-    list.forEach((creature) => {
+    CREATURES.filter((c) => state.dexFilter === "all" || c.area === state.dexFilter).forEach((creature) => {
       const owned = state.dex.has(creature.id);
       const li = document.createElement("li");
       li.className = `dex-item${owned ? "" : " locked"}`;
@@ -646,10 +867,9 @@
         img.alt = creature.name;
         thumb.appendChild(img);
       } else thumb.textContent = "?";
+      const areaLabel = creature.area === "grove" ? "Mist Grove" : creature.area === "shore" ? "Tidebloom Shore" : "Blossom Route";
       const info = document.createElement("div");
-      info.innerHTML = `<h3>${owned ? creature.name : "???"}</h3><p>${
-        owned ? creature.description : "Not yet discovered."
-      }</p><p class="hint" style="margin:0.15rem 0 0">${creature.area === "grove" ? "Mist Grove" : "Blossom Route"}</p>`;
+      info.innerHTML = `<h3>${owned ? creature.name : "???"}</h3><p>${owned ? creature.description : "Not yet discovered."}</p><p class="hint" style="margin:0.15rem 0 0">${areaLabel}</p>`;
       const tag = document.createElement("span");
       tag.className = `type-tag type-${creature.type.toLowerCase()}`;
       tag.textContent = owned ? creature.type : "—";
@@ -665,7 +885,6 @@
     showScreen("dex");
   }
 
-  // ---- Draw world ----
   function drawWorld() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const map = getMap(state.mapId);
@@ -678,7 +897,18 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // tall grass shimmer
+    // fence overlay hint on pen
+    if (state.mapId === "pen") {
+      for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+          if (getTileOn("pen", x, y) === TILE.FENCE) {
+            ctx.fillStyle = "rgba(140, 100, 70, 0.18)";
+            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          }
+        }
+      }
+    }
+
     if (map.encounter) {
       for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
@@ -690,18 +920,22 @@
       }
     }
 
-    // NPC markers
-    map.npcs.forEach((n) => drawNpcMarker(ctx, n.x, n.y, n.kind));
+    (map.warps || []).forEach((w) => drawWarp(ctx, w, state.animTime));
+    (map.npcs || []).forEach((n) => drawNpc(ctx, n, state.animTime));
 
-    // warp hints
-    map.warps.forEach((w) => {
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.fillRect(w.x * TILE_SIZE + 6, w.y * TILE_SIZE + 6, 20, 20);
-      ctx.strokeStyle = "rgba(196,95,132,0.7)";
-      ctx.strokeRect(w.x * TILE_SIZE + 6, w.y * TILE_SIZE + 6, 20, 20);
-    });
+    // pen creatures
+    if (state.mapId === "pen") {
+      (map.pens || []).forEach((slot, i) => {
+        const m = state.storage[i];
+        if (m) drawPenCreature(ctx, m.id, slot, state.animTime);
+        else {
+          // empty stall marker
+          ctx.strokeStyle = "rgba(196,95,132,0.35)";
+          ctx.strokeRect(slot.x * TILE_SIZE + 4, slot.y * TILE_SIZE + 4, 24, 24);
+        }
+      });
+    }
 
-    // petals
     for (const p of state.petals) {
       ctx.globalAlpha = 0.65;
       ctx.fillStyle = p.color;
@@ -712,7 +946,7 @@
     }
 
     const p = state.player;
-    drawPlayer(ctx, p.px, p.py, p.facing, p.step);
+    drawPlayer(ctx, p.px, p.py, p.facing, p.step, state.cosmetics.outfit, state.cosmetics.accessory, state.animTime);
 
     const g = ctx.createRadialGradient(320, 240, 150, 320, 240, 430);
     g.addColorStop(0, "rgba(0,0,0,0)");
@@ -723,19 +957,11 @@
 
   // ---- Input ----
   const keyMap = {
-    ArrowUp: "up",
-    ArrowDown: "down",
-    ArrowLeft: "left",
-    ArrowRight: "right",
-    w: "up",
-    W: "up",
-    s: "down",
-    S: "down",
-    a: "left",
-    A: "left",
-    d: "right",
-    D: "right",
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    w: "up", W: "up", s: "down", S: "down", a: "left", A: "left", d: "right", D: "right",
   };
+
+  const menuModes = ["party", "bag", "dex", "shop", "skills", "style", "pen"];
 
   window.addEventListener("keydown", (e) => {
     if (e.key === " " || e.code === "Space") {
@@ -745,42 +971,31 @@
       return;
     }
     if (e.key === "Escape") {
-      if (["party", "bag", "dex", "shop"].includes(state.mode)) closeMenuToPlay();
+      if (menuModes.includes(state.mode)) closeMenuToPlay();
       return;
     }
-    if (e.key === "e" || e.key === "E") {
-      if (state.mode === "dex") closeMenuToPlay();
-      else openDex();
-    }
-    if (e.key === "p" || e.key === "P") {
-      if (state.mode === "party") closeMenuToPlay();
-      else openParty();
-    }
-    if (e.key === "b" || e.key === "B") {
-      if (state.mode === "bag") closeMenuToPlay();
-      else openBag();
-    }
+    if (e.key === "e" || e.key === "E") state.mode === "dex" ? closeMenuToPlay() : openDex();
+    if (e.key === "p" || e.key === "P") state.mode === "party" ? closeMenuToPlay() : openParty();
+    if (e.key === "b" || e.key === "B") state.mode === "bag" ? closeMenuToPlay() : openBag();
+    if (e.key === "k" || e.key === "K") state.mode === "skills" ? closeMenuToPlay() : openSkills();
+    if (e.key === "c" || e.key === "C") state.mode === "style" ? closeMenuToPlay() : openStyle();
     const dir = keyMap[e.key];
     if (!dir) return;
     e.preventDefault();
     state.keys.add(dir);
   });
-
   window.addEventListener("keyup", (e) => {
     const dir = keyMap[e.key];
     if (dir) state.keys.delete(dir);
   });
 
-  // starter select
-  let selectedStarter = null;
-  document.querySelectorAll(".starter-card").forEach((card) => {
+  document.querySelectorAll(".starter-card[data-starter]").forEach((card) => {
     card.addEventListener("click", () => {
-      document.querySelectorAll(".starter-card").forEach((c) => c.classList.remove("selected"));
+      document.querySelectorAll(".starter-card[data-starter]").forEach((c) => c.classList.remove("selected"));
       card.classList.add("selected");
-      selectedStarter = card.dataset.starter;
-      state.starter = selectedStarter;
+      state.starter = card.dataset.starter;
       ui.btnStart.disabled = false;
-      ui.btnStart.textContent = `Start with ${getCreatureById(selectedStarter).name}`;
+      ui.btnStart.textContent = `Start with ${getCreatureById(state.starter).name}`;
     });
   });
 
@@ -794,13 +1009,16 @@
   document.getElementById("btn-shop-close").addEventListener("click", closeMenuToPlay);
   document.getElementById("btn-party").addEventListener("click", () => (state.mode === "party" ? closeMenuToPlay() : openParty()));
   document.getElementById("btn-party-close").addEventListener("click", closeMenuToPlay);
+  document.getElementById("btn-skills").addEventListener("click", () => (state.mode === "skills" ? closeMenuToPlay() : openSkills()));
+  document.getElementById("btn-skills-close").addEventListener("click", closeMenuToPlay);
+  document.getElementById("btn-style").addEventListener("click", () => (state.mode === "style" ? closeMenuToPlay() : openStyle()));
+  document.getElementById("btn-style-close").addEventListener("click", closeMenuToPlay);
+  document.getElementById("btn-pen-close").addEventListener("click", closeMenuToPlay);
   document.getElementById("btn-bag").addEventListener("click", () => (state.mode === "bag" ? closeMenuToPlay() : openBag()));
   document.getElementById("btn-bag-close").addEventListener("click", closeMenuToPlay);
   document.getElementById("btn-dex").addEventListener("click", () => (state.mode === "dex" ? closeMenuToPlay() : openDex()));
   document.getElementById("btn-dex-close").addEventListener("click", closeMenuToPlay);
-  document.getElementById("btn-fight").addEventListener("click", () => {
-    if (!state.battleBusy) showMoves();
-  });
+  document.getElementById("btn-fight").addEventListener("click", () => { if (!state.battleBusy) showMoves(); });
   document.getElementById("btn-throw").addEventListener("click", tryCatch);
   document.getElementById("btn-item").addEventListener("click", () => {
     if (state.battleBusy) return;
@@ -816,17 +1034,15 @@
     state.inventory[itemId] -= 1;
     state.battleBusy = true;
     ui.mainActions.classList.add("hidden");
-    ui.battleLog.textContent = `Used ${itemId === "hi_potion" ? "Bloom Balm" : "Petal Tonic"}! (+${ally.hp - before} HP)`;
+    ui.battleLog.textContent = `Used item! (+${ally.hp - before} HP)`;
     updateBattleBars();
     updateHud();
     setTimeout(() => foeTurn(), 600);
   });
   document.getElementById("btn-flee").addEventListener("click", () => {
     if (state.battleBusy) return;
-    if (Math.random() < 0.7) {
-      endBattle();
-      setMsg("Got away safely.");
-    } else {
+    if (Math.random() < 0.7) { endBattle(); setMsg("Got away safely."); }
+    else {
       state.battleBusy = true;
       ui.mainActions.classList.add("hidden");
       ui.battleLog.textContent = "Couldn't escape!";
@@ -842,6 +1058,22 @@
       renderDex();
     });
   });
+  document.querySelectorAll(".shop-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".shop-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      state.shopTab = tab.dataset.shop;
+      renderShop();
+    });
+  });
+  document.querySelectorAll(".pen-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".pen-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      state.penTab = tab.dataset.pen;
+      renderPen();
+    });
+  });
 
   let last = performance.now();
   function frame(now) {
@@ -849,16 +1081,11 @@
     last = now;
     state.animTime += dt;
     state.grassWave += dt * 3;
-
     for (const p of state.petals) {
       p.y += p.sp * dt;
       p.x += Math.sin(state.animTime * 1.4 + p.phase) * p.drift * dt;
-      if (p.y > 490) {
-        p.y = -6;
-        p.x = Math.random() * 640;
-      }
+      if (p.y > 490) { p.y = -6; p.x = Math.random() * 640; }
     }
-
     if (state.encounterCooldown > 0) state.encounterCooldown -= dt;
 
     if (state.mode === "play") {
@@ -901,7 +1128,7 @@
     })
     .catch((err) => {
       console.error(err);
-      setMsg("Failed to load art assets.");
+      setMsg("Failed to load art assets: " + err.message);
     });
 
   requestAnimationFrame(frame);
