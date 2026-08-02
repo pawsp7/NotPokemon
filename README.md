@@ -1,48 +1,47 @@
 # Routewild
 
-Sakura pastel RPG — town, two wild routes, party battles, and ten floral creatures.
+Sakura pastel RPG with customization, a creature pen, skills, and four explorable areas.
 
 ## Play
 
 **Live:** [https://pawsp7.github.io/NotPokemon/](https://pawsp7.github.io/NotPokemon/)
 
-Local:
-
 ```bash
 python3 -m http.server 8080
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
-
-If the live page looks stale, hard-refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`).
+Hard-refresh if the live page looks stale (`Ctrl+Shift+R` / `Cmd+Shift+R`).
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
 | WASD / Arrows | Move |
-| Space | Talk / advance dialogue |
+| Space | Talk / interact |
 | P | Party |
+| K | Skills |
+| C | Style closet |
 | B | Bag |
 | E | Dex |
 | Esc | Close menu |
 
-## Screens
+## Areas
 
-1. **Petalvale** — heal shrine, shop, starter town  
+1. **Petalvale** — heal, shop/boutique, style, creature pen  
 2. **Blossom Route** — first five creatures  
-3. **Mist Grove** — five rarer creatures  
+3. **Mist Grove** — five mist creatures  
+4. **Tidebloom Shore** — five coastal creatures  
 
-## RPG
+## Features
 
-- Choose a starter (Bloomvu / Fernkit / Lilypurr)
-- Party of up to 3 with HP, levels, XP
-- Turn battles: Fight · Catch · Item · Flee
-- Type matchups, petals currency, shop items
-- Heal for free at Nurse Sakura
+- Character outfits & accessories (shop + achievements)
+- Creature Pen to store/view caught friends
+- Skill points on level-up (HP / ATK / DEF / SPD)
+- Turn battles with type matchups
+- Painted NPCs, warp icons, and pixel hitboxes
 
-## Creatures (10)
+## Creatures (15)
 
 **Route:** Bloomvu, Lilypurr, Fernkit, Petalamp, Roseroot  
-
-**Grove:** Mistwing, Thornpaw, Glacilia, Emberose, Crystalyn
+**Grove:** Mistwing, Thornpaw, Glacilia, Emberose, Crystalyn  
+**Shore:** Pearlotter, Coralclaw, Kelpsong, Anemist, Nightdrift

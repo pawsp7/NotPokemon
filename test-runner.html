@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/><title>Routewild Tests</title></head>
+<body>
+<pre id="out">running…</pre>
+<script src="js/creatures.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/rpg.js"></script>
+<script src="js/cosmetics.js"></script>
+<script src="js/sprites.js"></script>
+<script>
+const out = document.getElementById('out');
+const lines = [];
+function ok(name, cond) { lines.push((cond ? 'OK  ' : 'FAIL') + ' ' + name); if (!cond) console.error('FAIL', name); }
+(async () => {
+  try {
+    ok('15 creatures', CREATURES.length === 15);
+    ok('shore 5', creaturesForArea('shore').length === 5);
+    ok('maps shore+pen', !!(MAPS.shore && MAPS.pen && MAPS.town && MAPS.route && MAPS.grove));
+    const m = makePartyMember('bloomvu', 5);
+    ok('skillPoints', m.skillPoints === 1);
+    ok('spendSkill', spendSkill(m, 'atk') && m.skills.atk === 1 && m.skillPoints === 0);
+    ok('occupy start', canOccupyPixels('town', 10*32, 12*32));
+    ok('block tree', !canOccupyPixels('town', 0, 0));
+    ok('npc blocks', tileBlocked('town', 4, 5));
+    ok('warp shore', !!warpAt('route', 5, 14) && warpAt('route', 5, 14).to === 'shore');
+    ok('warp pen', !!warpAt('town', 16, 9) && warpAt('town', 16, 9).to === 'pen');
+    const cos = defaultCosmetics();
+    const st = { cosmetics: cos, dex: new Set(CREATURES.slice(0,5).map(c=>c.id)), storage: [{},{},{}], battlesWon: 10 };
+    const newly = evaluateAchievements(st);
+    ok('ach catch5', newly.some(a => a.id === 'catch5'));
+    ok('ach pen3', newly.some(a => a.id === 'pen3'));
+    ok('ach battles10', newly.some(a => a.id === 'battles10'));
+    ok('scarf unlock', cos.unlockedAccessories.includes('scarf_leaf'));
+    await loadImages();
+    ok('images shore', !!IMAGES.shore);
+    ok('images pen', !!IMAGES.pen);
+    ok('images pearlotter', !!IMAGES.pearlotter);
+    ok('images npc nurse', !!IMAGES.npc_nurse);
+    ok('images icon warp', !!IMAGES.icon_warp);
+    ok('outfit mint', !!IMAGES.player_coat_mint);
+    const failed = lines.filter(l => l.startsWith('FAIL')).length;
+    lines.push(failed ? `\n${failed} FAILED` : '\nALL PASSED');
+    out.textContent = lines.join('\n');
+    document.title = failed ? 'FAIL' : 'PASS';
+  } catch (e) {
+    out.textContent = 'ERROR ' + e.stack;
+    document.title = 'FAIL';
+  }
+})();
+</script>
+</body>
+</html>
