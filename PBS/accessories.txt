@@ -1,0 +1,9 @@
+# InternalName,Name,Slot,Unlock,Price,Achieve,Description
+CLIP_SAKURA,Sakura Clip,hair,start,0,,A tiny blossom pin.
+HAT_STRAW,Ribbon Hat,hat,shop,30,,Keeps the sun soft.
+CROWN_FLOWER,Flower Crown,hat,achieve,0,catch10,Petals for a champion.
+EARRINGS_PEARL,Pearl Drops,face,shop,35,,Shorelight earrings.
+SCARF_LEAF,Leaf Scarf,neck,achieve,0,catch5,Woven fern silk.
+PENDANT_CRYSTAL,Crystal Pendant,neck,achieve,0,grove3,Hums in the mist.
+BROOCH_ROSE,Rose Brooch,chest,shop,40,,A thorny keepsake.
+BOOTS_SOFT,Moss Boots,feet,achieve,0,battles10,Quiet steps on paths.

@@ -1,0 +1,340 @@
+{
+  "town": {
+    "id": "town",
+    "name": "Petalvale",
+    "bg": "town",
+    "encounter": false,
+    "start": {
+      "x": 10,
+      "y": 12
+    },
+    "warps": [
+      {
+        "x": 10,
+        "y": 14,
+        "to": "route",
+        "tx": 10,
+        "ty": 2,
+        "label": "\u2193 Blossom Route",
+        "icon": "warp",
+        "dir": "down"
+      },
+      {
+        "x": 9,
+        "y": 14,
+        "to": "route",
+        "tx": 10,
+        "ty": 2,
+        "label": "\u2193 Blossom Route",
+        "icon": "warp",
+        "dir": "down"
+      },
+      {
+        "x": 18,
+        "y": 9,
+        "to": "pen",
+        "tx": 4,
+        "ty": 12,
+        "label": "\u2192 Creature Pen",
+        "icon": "pen",
+        "dir": "right"
+      },
+      {
+        "x": 10,
+        "y": 0,
+        "to": "route",
+        "tx": 10,
+        "ty": 2,
+        "label": "\u2191 Blossom Route",
+        "icon": "warp",
+        "dir": "up"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "healer",
+        "x": 15,
+        "y": 6,
+        "name": "Nurse Sakura",
+        "kind": "heal",
+        "sprite": "nurse",
+        "icon": "heal",
+        "lines": [
+          "Welcome to the Petal Shrine.",
+          "I'll mend your party's wounds \u2014 rest easy."
+        ]
+      },
+      {
+        "id": "shop",
+        "x": 4,
+        "y": 6,
+        "name": "Vendor Moss",
+        "kind": "shop",
+        "sprite": "vendor",
+        "icon": "shop",
+        "lines": [
+          "Petal goods and boutique looks!",
+          "Orbs, tonics, and outfits await."
+        ]
+      },
+      {
+        "id": "guide",
+        "x": 10,
+        "y": 9,
+        "name": "Elder Bloom",
+        "kind": "talk",
+        "sprite": "elder",
+        "icon": "talk",
+        "lines": [
+          "Catch creatures, raise skills, and style your look.",
+          "South stairs lead to Blossom Route. East path opens the Pen.",
+          "Use the location menu above to teleport between areas."
+        ]
+      },
+      {
+        "id": "stylist",
+        "x": 7,
+        "y": 4,
+        "name": "Tailor Pip",
+        "kind": "style",
+        "sprite": "scout",
+        "icon": "mirror",
+        "lines": [
+          "Need a new cloak or clip?",
+          "Open the Style menu anytime with C \u2014 or talk to me!"
+        ]
+      }
+    ],
+    "pens": [],
+    "gridFile": "map_town.txt"
+  },
+  "route": {
+    "id": "route",
+    "name": "Blossom Route",
+    "bg": "route",
+    "encounter": true,
+    "start": {
+      "x": 10,
+      "y": 2
+    },
+    "warps": [
+      {
+        "x": 10,
+        "y": 0,
+        "to": "town",
+        "tx": 10,
+        "ty": 13,
+        "label": "\u2191 Petalvale",
+        "icon": "warp",
+        "dir": "up"
+      },
+      {
+        "x": 19,
+        "y": 8,
+        "to": "grove",
+        "tx": 2,
+        "ty": 7,
+        "label": "\u2192 Mist Grove",
+        "icon": "warp",
+        "dir": "right"
+      },
+      {
+        "x": 18,
+        "y": 8,
+        "to": "grove",
+        "tx": 2,
+        "ty": 7,
+        "label": "\u2192 Mist Grove",
+        "icon": "warp",
+        "dir": "right"
+      },
+      {
+        "x": 10,
+        "y": 14,
+        "to": "shore",
+        "tx": 10,
+        "ty": 2,
+        "label": "\u2193 Tidebloom Shore",
+        "icon": "warp",
+        "dir": "down"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "scout",
+        "x": 12,
+        "y": 6,
+        "name": "Scout Hana",
+        "kind": "talk",
+        "sprite": "scout",
+        "icon": "talk",
+        "lines": [
+          "Tall grass hides the first five creatures.",
+          "North stairs return to town. East path enters Mist Grove. South path reaches the shore."
+        ]
+      }
+    ],
+    "pens": [],
+    "gridFile": "map_route.txt"
+  },
+  "grove": {
+    "id": "grove",
+    "name": "Mist Grove",
+    "bg": "grove",
+    "encounter": true,
+    "start": {
+      "x": 2,
+      "y": 7
+    },
+    "warps": [
+      {
+        "x": 0,
+        "y": 7,
+        "to": "route",
+        "tx": 17,
+        "ty": 8,
+        "label": "\u2190 Blossom Route",
+        "icon": "warp",
+        "dir": "left"
+      },
+      {
+        "x": 1,
+        "y": 7,
+        "to": "route",
+        "tx": 17,
+        "ty": 8,
+        "label": "\u2190 Blossom Route",
+        "icon": "warp",
+        "dir": "left"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "mystic",
+        "x": 9,
+        "y": 4,
+        "name": "Mystic Rei",
+        "kind": "talk",
+        "sprite": "mystic",
+        "icon": "talk",
+        "lines": [
+          "Five rare blooms haunt this mist\u2026",
+          "Spend skill points after leveling \u2014 open Skills from Party."
+        ]
+      }
+    ],
+    "pens": [],
+    "gridFile": "map_grove.txt"
+  },
+  "shore": {
+    "id": "shore",
+    "name": "Tidebloom Shore",
+    "bg": "shore",
+    "encounter": true,
+    "start": {
+      "x": 10,
+      "y": 2
+    },
+    "warps": [
+      {
+        "x": 10,
+        "y": 0,
+        "to": "route",
+        "tx": 10,
+        "ty": 13,
+        "label": "\u2191 Blossom Route",
+        "icon": "warp",
+        "dir": "up"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "tidekeeper",
+        "x": 14,
+        "y": 6,
+        "name": "Tidekeeper Ume",
+        "kind": "talk",
+        "sprite": "mystic",
+        "icon": "talk",
+        "lines": [
+          "Five coastal blooms live in the tide grass.",
+          "Pearlotter, Coralclaw, Kelpsong, Anemist, and Nightdrift."
+        ]
+      }
+    ],
+    "pens": [],
+    "gridFile": "map_shore.txt"
+  },
+  "pen": {
+    "id": "pen",
+    "name": "Creature Pen",
+    "bg": "pen",
+    "encounter": false,
+    "start": {
+      "x": 4,
+      "y": 12
+    },
+    "warps": [
+      {
+        "x": 4,
+        "y": 13,
+        "to": "town",
+        "tx": 17,
+        "ty": 9,
+        "label": "\u2190 Petalvale",
+        "icon": "warp",
+        "dir": "down"
+      }
+    ],
+    "npcs": [
+      {
+        "id": "keeper",
+        "x": 9,
+        "y": 11,
+        "name": "Pen Keeper Ren",
+        "kind": "pen",
+        "sprite": "vendor",
+        "icon": "pen",
+        "lines": [
+          "Welcome to the Creature Pen!",
+          "Deposit party friends here, or admire your Dex blooms."
+        ]
+      }
+    ],
+    "pens": [
+      {
+        "x": 4,
+        "y": 4
+      },
+      {
+        "x": 7,
+        "y": 4
+      },
+      {
+        "x": 12,
+        "y": 4
+      },
+      {
+        "x": 15,
+        "y": 4
+      },
+      {
+        "x": 4,
+        "y": 7
+      },
+      {
+        "x": 7,
+        "y": 7
+      },
+      {
+        "x": 12,
+        "y": 7
+      },
+      {
+        "x": 15,
+        "y": 7
+      }
+    ],
+    "gridFile": "map_pen.txt"
+  }
+}
