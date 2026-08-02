@@ -1,4 +1,4 @@
-/** Image assets + drawing helpers */
+/** Image assets + drawing helpers (walk cycles, creature idle, warps) */
 
 const ASSET_URLS = {
   route: "assets/world/route.png",
@@ -12,6 +12,10 @@ const ASSET_URLS = {
   player_coat_mint: "assets/world/player_coat_mint.png",
   player_cape_lavender: "assets/world/player_cape_lavender.png",
   player_vest_coral: "assets/world/player_vest_coral.png",
+  player_cloak_pink_walk: "assets/world/player_cloak_pink_walk.png",
+  player_coat_mint_walk: "assets/world/player_coat_mint_walk.png",
+  player_cape_lavender_walk: "assets/world/player_cape_lavender_walk.png",
+  player_vest_coral_walk: "assets/world/player_vest_coral_walk.png",
   bloomvu: "assets/creatures/bloomvu.png",
   lilypurr: "assets/creatures/lilypurr.png",
   fernkit: "assets/creatures/fernkit.png",
@@ -68,19 +72,34 @@ function loadImages() {
   );
 }
 
-function drawCreature(ctx, creature, cx, cy, scale = 1) {
+function drawCreature(ctx, creature, cx, cy, scale = 1, animTime = 0, opts = {}) {
   const img = IMAGES[creature.id];
   if (!img) return;
   const size = 140 * scale;
+  const bob = Math.sin(animTime * 3 + (opts.phase || 0)) * (opts.bob ?? 4);
+  const squash = 1 + Math.sin(animTime * 3 + 1) * 0.03;
+  const lunge = opts.lunge || 0;
   ctx.save();
-  const g = ctx.createRadialGradient(cx, cy + size * 0.1, size * 0.15, cx, cy, size * 0.55);
+  const g = ctx.createRadialGradient(cx + lunge, cy + size * 0.1 + bob, size * 0.15, cx + lunge, cy + bob, size * 0.55);
   g.addColorStop(0, (creature.colors?.glow || "#ffc4d4") + "88");
   g.addColorStop(1, "rgba(255,200,220,0)");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(cx, cy + 8, size * 0.5, 0, Math.PI * 2);
+  ctx.arc(cx + lunge, cy + 8 + bob, size * 0.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
+
+  const w = size * (opts.mirror ? -1 : 1);
+  const h = size * squash;
+  ctx.translate(cx + lunge, cy + bob);
+  if (opts.mirror) ctx.scale(-1, 1);
+  ctx.drawImage(img, -Math.abs(w) / 2, -h / 2, Math.abs(w), h);
+
+  // soft sparkle
+  ctx.globalAlpha = 0.35 + Math.sin(animTime * 5) * 0.15;
+  ctx.fillStyle = creature.colors?.glow || "#ffc4d4";
+  ctx.beginPath();
+  ctx.arc(size * 0.28, -size * 0.2, 3, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -88,31 +107,50 @@ function playerImageKey(outfitId) {
   return `player_${outfitId || "cloak_pink"}`;
 }
 
-function drawPlayer(ctx, px, py, facing, step, outfitId, accessoryId, bobTime = 0) {
+function playerWalkKey(outfitId) {
+  return `player_${outfitId || "cloak_pink"}_walk`;
+}
+
+function drawPlayer(ctx, px, py, facing, step, outfitId, accessoryId, bobTime = 0, moving = false) {
+  const walk = IMAGES[playerWalkKey(outfitId)];
   const img = IMAGES[playerImageKey(outfitId)] || IMAGES.player || IMAGES.player_cloak_pink;
-  const bob = step % 2 === 1 ? 1 : 0;
+  const frame = moving ? (Math.floor(bobTime * 10) % 4) : (step % 2);
+  const bob = moving ? Math.sin(bobTime * 14) * 2 : (step % 2 === 1 ? 1 : 0);
   const size = 42;
   ctx.save();
   ctx.fillStyle = "rgba(74, 42, 50, 0.28)";
   ctx.beginPath();
-  ctx.ellipse(px + TILE_SIZE / 2, py + TILE_SIZE - 2 + bob, 11, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(px + TILE_SIZE / 2, py + TILE_SIZE - 2 + Math.abs(bob) * 0.3, 11 + (moving ? 1 : 0), 4, 0, 0, Math.PI * 2);
   ctx.fill();
 
   const dx = px + (TILE_SIZE - size) / 2;
   const dy = py + TILE_SIZE - size - 2 + bob;
-  if (img) {
+
+  const drawFacing = (drawFn) => {
     if (facing === "left") {
+      ctx.save();
       ctx.translate(dx + size, dy);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0, size, size);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.translate(0, 0);
+      drawFn(0, 0);
+      ctx.restore();
     } else {
-      ctx.drawImage(img, dx, dy, size, size);
+      drawFn(dx, dy);
     }
+  };
+
+  if (walk && moving) {
+    drawFacing((x, y) => {
+      ctx.drawImage(walk, frame * 128, 0, 128, 128, x, y, size, size);
+    });
+  } else if (img) {
+    drawFacing((x, y) => {
+      // idle breathing
+      const breath = 1 + Math.sin(bobTime * 2.2) * 0.02;
+      const ih = size * breath;
+      ctx.drawImage(img, x, y + (size - ih), size, ih);
+    });
   }
 
-  // accessory overlay (small icon near head)
   const acc = IMAGES[`cos_${accessoryId}`];
   if (acc) {
     const ax = facing === "left" ? dx + 4 : dx + size - 18;
@@ -154,7 +192,6 @@ function drawNpc(ctx, npc, animTime) {
   const sprite = IMAGES[`npc_${npc.sprite}`];
   const icon = IMAGES[`icon_${npc.icon || npc.kind}`];
 
-  // soft pad
   ctx.fillStyle = "rgba(255,248,251,0.45)";
   ctx.beginPath();
   ctx.ellipse(px + 16, py + 28, 12, 5, 0, 0, Math.PI * 2);
@@ -167,7 +204,6 @@ function drawNpc(ctx, npc, animTime) {
     ctx.fillRect(px + 8, py + 4, 16, 22);
   }
 
-  // distinctive overhead icon
   if (icon) {
     ctx.drawImage(icon, px + 20, py - 18 + Math.sin(animTime * 4) * 2, 18, 18);
   } else {
@@ -181,23 +217,60 @@ function drawWarp(ctx, warp, animTime) {
   const px = warp.x * TILE_SIZE;
   const py = warp.y * TILE_SIZE;
   const icon = IMAGES[`icon_${warp.icon || "warp"}`];
+  const pulse = 0.45 + Math.sin(animTime * 4 + warp.x) * 0.2;
+
   ctx.save();
-  ctx.globalAlpha = 0.55 + Math.sin(animTime * 3 + warp.x) * 0.15;
+  // glowing path pad
+  ctx.fillStyle = `rgba(232, 145, 176, ${0.25 + pulse * 0.25})`;
+  ctx.beginPath();
+  ctx.arc(px + 16, py + 16, 13, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(196, 95, 132, ${0.55 + pulse * 0.35})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px + 4, py + 4, 24, 24);
+
+  ctx.globalAlpha = 0.75 + pulse * 0.2;
   if (icon) {
-    ctx.drawImage(icon, px + 2, py + 2, 28, 28);
-  } else {
-    ctx.strokeStyle = "#c45f84";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px + 6, py + 6, 20, 20);
+    ctx.drawImage(icon, px + 2, py - 2 + Math.sin(animTime * 3) * 2, 28, 28);
   }
+
+  // direction chevron
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = "#fff8fb";
+  ctx.font = "bold 12px Quicksand, sans-serif";
+  ctx.textAlign = "center";
+  const chev = warp.dir === "up" ? "▲" : warp.dir === "down" ? "▼" : warp.dir === "left" ? "◀" : warp.dir === "right" ? "▶" : "✦";
+  ctx.fillText(chev, px + 16, py + 28);
   ctx.restore();
 }
 
 function drawPenCreature(ctx, creatureId, slot, animTime) {
   const img = IMAGES[creatureId];
   if (!img) return;
-  const bob = Math.sin(animTime * 2 + slot.x) * 2;
+  const bob = Math.sin(animTime * 2.5 + slot.x) * 3;
+  const squash = 1 + Math.sin(animTime * 2.5 + slot.x) * 0.04;
   const px = slot.x * TILE_SIZE + 16;
   const py = slot.y * TILE_SIZE + 16 + bob;
-  ctx.drawImage(img, px - 20, py - 22, 40, 40);
+  const h = 40 * squash;
+  ctx.drawImage(img, px - 20, py - h / 2 - 2, 40, h);
+}
+
+function drawSolidHints(ctx, mapId, animTime) {
+  // subtle outline on buildings/fences near player is optional; keep light tint for fence/building
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const t = getTileOn(mapId, x, y);
+      if (t === TILE.FENCE) {
+        ctx.fillStyle = "rgba(140, 100, 70, 0.16)";
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      } else if (t === TILE.BUILDING) {
+        ctx.fillStyle = "rgba(90, 50, 70, 0.08)";
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      } else if (t === TILE.LEDGE) {
+        ctx.fillStyle = "rgba(90, 60, 50, 0.12)";
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+    }
+  }
 }

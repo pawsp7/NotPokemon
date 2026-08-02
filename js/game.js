@@ -8,6 +8,10 @@
   const styleCanvas = document.getElementById("style-preview");
   const styleCtx = styleCanvas.getContext("2d");
 
+  const detailCanvas = document.getElementById("detail-sprite");
+  const detailCtx = detailCanvas.getContext("2d");
+  const transitionVeil = document.getElementById("transition-veil");
+
   const screens = {
     title: document.getElementById("screen-title"),
     dialogue: document.getElementById("screen-dialogue"),
@@ -19,11 +23,12 @@
     bag: document.getElementById("screen-bag"),
     battle: document.getElementById("screen-battle"),
     dex: document.getElementById("screen-dex"),
+    detail: document.getElementById("screen-detail"),
     win: document.getElementById("screen-win"),
   };
 
   const ui = {
-    loc: document.getElementById("loc-pill"),
+    loc: document.getElementById("loc-select"),
     money: document.getElementById("money-count"),
     orbs: document.getElementById("orb-count"),
     caught: document.getElementById("caught-count"),
@@ -55,6 +60,13 @@
     achieveList: document.getElementById("achieve-list"),
     styleSummary: document.getElementById("style-summary"),
     penList: document.getElementById("pen-list"),
+    detailTitle: document.getElementById("detail-title"),
+    detailMeta: document.getElementById("detail-meta"),
+    detailDesc: document.getElementById("detail-desc"),
+    detailStats: document.getElementById("detail-stats"),
+    detailMoves: document.getElementById("detail-moves"),
+    detailStatus: document.getElementById("detail-status"),
+    btnMute: document.getElementById("btn-mute"),
   };
 
   const state = {
@@ -83,6 +95,13 @@
     grassWave: 0,
     petals: [],
     selectedSkillUid: null,
+    detailId: null,
+    detailMember: null,
+    detailReturn: null,
+    battleAnim: { allyLunge: 0, foeLunge: 0, shake: 0 },
+    transition: 0,
+    muted: false,
+    walkSfxCd: 0,
   };
 
   window.__currentMapId = "town";
@@ -139,18 +158,38 @@
 
   function updateHud() {
     const map = getMap(state.mapId);
-    ui.loc.textContent = map?.name || state.mapId;
+    if (ui.loc && ui.loc.value !== state.mapId) ui.loc.value = state.mapId;
     ui.money.textContent = `❀ ${state.money}`;
     ui.orbs.textContent = `Orbs: ${state.inventory.orb}`;
     ui.caught.textContent = `Dex: ${state.dex.size}/${TOTAL_CREATURES}`;
     const hints = {
-      town: "Petalvale · Space talk · East to Pen · South to Route",
-      route: "Blossom Route · East Grove · South Shore",
-      grove: "Mist Grove · Spend skill points after leveling",
-      shore: "Tidebloom Shore · Five coastal blooms",
-      pen: "Creature Pen · Space on Keeper to manage storage",
+      town: "Petalvale · Space talk · East Pen · South Route · Location menu teleports",
+      route: "Blossom Route · Look for glowing path exits · Tall grass encounters",
+      grove: "Mist Grove · West path returns · Spend skill points after leveling",
+      shore: "Tidebloom Shore · North path returns · Five coastal blooms",
+      pen: "Creature Pen · Fences block · South gate to town",
     };
     ui.areaHint.textContent = hints[state.mapId] || map?.name || "";
+  }
+
+  function playMapMusic() {
+    if (state.muted) return;
+    const id = state.mode === "battle" ? "battle" : state.mode === "title" ? "title" : state.mapId;
+    AudioBus.playBgm(id);
+  }
+
+  function sfx(kind, detail) {
+    if (state.muted) return;
+    AudioBus.sfx(kind, detail);
+  }
+
+  function travelTo(mapId, opts = {}) {
+    if (state.mode === "battle" || state.mode === "title") return;
+    const point = TRAVEL_POINTS.find((p) => p.id === mapId) || { id: mapId, x: getMap(mapId)?.start.x, y: getMap(mapId)?.start.y };
+    if (!getMap(mapId)) return;
+    const overlayModes = ["party", "bag", "dex", "shop", "skills", "style", "pen", "detail", "dialogue"];
+    if (overlayModes.includes(state.mode)) closeMenuToPlay();
+    enterMap(mapId, opts.x ?? point.x, opts.y ?? point.y, { fade: true, announce: opts.announce ?? `Traveled to ${getMap(mapId).name}.` });
   }
 
   function placePlayer(x, y) {
@@ -160,14 +199,31 @@
     p.moving = false;
   }
 
-  function enterMap(mapId, x, y) {
-    state.mapId = mapId;
-    window.__currentMapId = mapId;
+  function enterMap(mapId, x, y, opts = {}) {
     const map = getMap(mapId);
-    placePlayer(x ?? map.start.x, y ?? map.start.y);
-    state.encounterCooldown = 0.6;
-    updateHud();
-    setMsg(`Entered ${map.name}.`);
+    if (!map) return;
+    const go = () => {
+      state.mapId = mapId;
+      window.__currentMapId = mapId;
+      placePlayer(x ?? map.start.x, y ?? map.start.y);
+      state.encounterCooldown = 0.6;
+      updateHud();
+      setMsg(opts.announce || `Entered ${map.name}.`);
+      if (state.mode === "play" || state.mode === "title") playMapMusic();
+      else if (state.mode !== "battle") playMapMusic();
+    };
+    if (opts.fade) {
+      state.transition = 1;
+      transitionVeil.classList.add("on");
+      sfx("warp");
+      setTimeout(() => {
+        go();
+        state.transition = 0;
+        transitionVeil.classList.remove("on");
+      }, 280);
+    } else {
+      go();
+    }
   }
 
   function resetGame() {
@@ -187,6 +243,9 @@
     hideOverlays();
     setMsg(`${getCreatureById(state.starter).name} joins you! Visit the Pen, Style closet, and head south.`);
     updateHud();
+    AudioBus.unlock();
+    playMapMusic();
+    if (!state.muted) AudioBus.creatureCry(getCreatureById(state.starter).type);
   }
 
   function facingTile() {
@@ -229,6 +288,10 @@
 
     p.moving = true;
     p.tx = nx; p.ty = ny; p.t = 0; p.step += 1;
+    if (state.walkSfxCd <= 0) {
+      sfx("walk");
+      state.walkSfxCd = 0.09;
+    }
   }
 
   function finishStep() {
@@ -239,8 +302,7 @@
 
     const warp = warpAt(state.mapId, p.x, p.y);
     if (warp) {
-      enterMap(warp.to, warp.tx, warp.ty);
-      setMsg(warp.label);
+      enterMap(warp.to, warp.tx, warp.ty, { fade: true, announce: warp.label });
       return;
     }
 
@@ -292,7 +354,8 @@
     }
     hideOverlays();
     if (npc.kind === "heal") {
-      state.party.forEach((m) => { m.hp = m.maxHp; });
+      state.party.forEach((m) => { m.hp = m.maxHp; m.status = null; });
+      sfx("heal");
       setMsg("Your party was fully healed at the Petal Shrine.");
       state.mode = "play";
     } else if (npc.kind === "shop") {
@@ -391,23 +454,87 @@
       const sp = getCreatureById(m.id);
       const li = document.createElement("li");
       li.className = `party-item${idx === 0 ? " lead" : ""}`;
+      const st = m.status ? STATUS_INFO[m.status.id]?.name : "";
       li.innerHTML = `
         <img src="${ASSET_URLS[m.id]}" alt="${sp.name}" />
         <div>
-          <strong>${sp.name}</strong> · Lv.${m.level}
+          <strong>${sp.name}</strong> · Lv.${m.level}${st ? ` · <span class="status-chip">${st}</span>` : ""}
           <div class="hp-bar"><i style="width:${Math.round((m.hp / m.maxHp) * 100)}%"></i></div>
           <span>${m.hp}/${m.maxHp} · Skills ${m.skillPoints || 0}</span>
+          <span class="hint" style="display:block;margin-top:0.15rem">Click card for moves · Shift-click to set lead</span>
         </div>
         <span class="type-tag type-${sp.type.toLowerCase()}">${sp.type}</span>`;
-      li.onclick = () => {
-        if (idx === 0) return;
-        const [picked] = state.party.splice(idx, 1);
-        state.party.unshift(picked);
-        renderParty();
-        setMsg(`${getCreatureById(picked.id).name} is now the lead.`);
+      li.onclick = (e) => {
+        if (e.shiftKey && idx !== 0) {
+          const [picked] = state.party.splice(idx, 1);
+          state.party.unshift(picked);
+          renderParty();
+          setMsg(`${getCreatureById(picked.id).name} is now the lead.`);
+          return;
+        }
+        openCreatureDetail(sp.id, { member: m, returnTo: "party" });
       };
       ui.partyList.appendChild(li);
     });
+  }
+
+  function openCreatureDetail(creatureId, opts = {}) {
+    const sp = getCreatureById(creatureId);
+    if (!sp) return;
+    if (opts.requireOwned && !state.dex.has(creatureId) && !(opts.member)) return;
+    state.detailId = creatureId;
+    state.detailMember = opts.member || null;
+    state.detailReturn = opts.returnTo || state.mode;
+    state.mode = "detail";
+    renderCreatureDetail();
+    showScreen("detail");
+    sfx("ui");
+    if (!state.muted) AudioBus.creatureCry(sp.type);
+  }
+
+  function renderCreatureDetail() {
+    const sp = getCreatureById(state.detailId);
+    if (!sp) return;
+    const m = state.detailMember;
+    ui.detailTitle.textContent = sp.name;
+    ui.detailMeta.innerHTML = `<span class="type-tag type-${sp.type.toLowerCase()}">${sp.type}</span> · ${areaDisplayName(sp.area)}${m ? ` · Lv.${m.level}` : ""}`;
+    ui.detailDesc.textContent = sp.description;
+    if (m) {
+      refreshMemberStats(m);
+      ui.detailStats.textContent = `HP ${m.hp}/${m.maxHp} · ATK ${memberAttack(m)} · DEF ${memberDefense(m)} · SPD ${memberSpeed(m)} · Skills ${m.skillPoints || 0}`;
+      ui.detailStatus.textContent = m.status ? `${STATUS_INFO[m.status.id]?.name || m.status.id}: ${STATUS_INFO[m.status.id]?.desc || ""}` : "No status effects";
+    } else {
+      ui.detailStats.textContent = `Base HP ${sp.base.hp} · ATK ${sp.base.atk} · DEF ${sp.base.def} · SPD ${sp.base.spd}`;
+      ui.detailStatus.textContent = state.dex.has(sp.id) ? "Documented in your Blossom Dex" : "Not yet discovered";
+    }
+    ui.detailMoves.innerHTML = "";
+    sp.moves.forEach((move) => {
+      const li = document.createElement("li");
+      li.className = "move-card";
+      li.innerHTML = `
+        <strong>${move.name}</strong>
+        <div class="move-meta">${formatMove(move)}</div>
+        <p class="move-effect">${move.desc || ""}${move.effect ? " · " + moveEffectLabel(move) : ""}</p>`;
+      ui.detailMoves.appendChild(li);
+    });
+    // animate preview
+    detailCtx.clearRect(0, 0, detailCanvas.width, detailCanvas.height);
+    drawCreature(detailCtx, sp, detailCanvas.width / 2, detailCanvas.height / 2 + 6, 1.05, state.animTime);
+  }
+
+  function closeDetail() {
+    const back = state.detailReturn;
+    state.detailId = null;
+    state.detailMember = null;
+    if (back === "party") openParty();
+    else if (back === "dex") openDex();
+    else if (back === "pen") openPen();
+    else if (back === "skills") openSkills();
+    else if (back === "title") {
+      state.mode = "title";
+      showScreen("title");
+      playMapMusic();
+    } else closeMenuToPlay();
   }
 
   function openSkills() {
@@ -553,10 +680,12 @@
         const li = document.createElement("li");
         li.className = "party-item";
         li.innerHTML = `<img src="${ASSET_URLS[m.id]}"/><div><strong>${sp.name}</strong> Lv.${m.level}<br/><span>${m.hp}/${m.maxHp} HP</span></div>`;
+        li.onclick = () => openCreatureDetail(sp.id, { member: m, returnTo: "pen" });
         const btn = document.createElement("button");
         btn.className = "cta";
         btn.textContent = "Withdraw";
-        btn.onclick = () => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
           if (state.party.length >= 3) return setMsg("Party is full (max 3).");
           const [pulled] = state.storage.splice(idx, 1);
           state.party.push(pulled);
@@ -574,11 +703,13 @@
         const li = document.createElement("li");
         li.className = "party-item";
         li.innerHTML = `<img src="${ASSET_URLS[m.id]}"/><div><strong>${sp.name}</strong> Lv.${m.level}</div>`;
+        li.onclick = () => openCreatureDetail(sp.id, { member: m, returnTo: "pen" });
         const btn = document.createElement("button");
         btn.className = "ghost";
         btn.textContent = "Deposit";
         btn.disabled = state.party.length <= 1;
-        btn.onclick = () => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
           if (state.party.length <= 1) return setMsg("Keep at least one party member.");
           if (state.storage.length >= 8) return setMsg("Pen stalls are full.");
           const [dep] = state.party.splice(idx, 1);
@@ -596,6 +727,7 @@
         const li = document.createElement("li");
         li.className = "party-item";
         li.innerHTML = `<img src="${ASSET_URLS[c.id]}"/><div><strong>${c.name}</strong><p class="hint" style="margin:.2rem 0 0">${c.description}</p></div><span class="type-tag type-${c.type.toLowerCase()}">${c.type}</span>`;
+        li.onclick = () => openCreatureDetail(c.id, { returnTo: "pen" });
         ui.penList.appendChild(li);
       });
     }
@@ -661,9 +793,11 @@
     }
     const species = rollWildEncounter(state.mapId, []);
     state.wild = makeWildFighter(species, trainerLevel());
+    state.wild.status = null;
     state.mode = "battle";
     state.battleBusy = false;
     state.encounterCooldown = 0.9;
+    state.battleAnim = { allyLunge: 0, foeLunge: 0, shake: 0 };
     ui.battleName.textContent = `${species.name} Lv.${state.wild.level}`;
     ui.battleType.textContent = species.type;
     ui.battleType.className = `type-tag type-${species.type.toLowerCase()}`;
@@ -674,16 +808,21 @@
     drawBattleSprites();
     showScreen("battle");
     setMsg(`Battle! ${species.name}`);
+    playMapMusic();
+    if (!state.muted) AudioBus.creatureCry(species.type);
   }
 
   function updateBattleBars() {
     const ally = lead();
     const sp = getCreatureById(ally.id);
-    ui.allyName.textContent = `${sp.name} Lv.${ally.level}`;
+    const allySt = ally.status ? ` · ${STATUS_INFO[ally.status.id]?.name || ally.status.id}` : "";
+    ui.allyName.textContent = `${sp.name} Lv.${ally.level}${allySt}`;
     const ap = Math.max(0, ally.hp / ally.maxHp);
     ui.allyHpFill.style.width = `${Math.round(ap * 100)}%`;
     ui.allyHpFill.classList.toggle("low", ap < 0.35);
     ui.allyHpText.textContent = `${ally.hp}/${ally.maxHp}`;
+    const foeSt = state.wild?.status ? ` · ${STATUS_INFO[state.wild.status.id]?.name || state.wild.status.id}` : "";
+    ui.battleName.textContent = `${state.wild.species.name} Lv.${state.wild.level}${foeSt}`;
     const wp = Math.max(0, state.wild.hp / state.wild.maxHp);
     ui.foeHpFill.style.width = `${Math.round(wp * 100)}%`;
     ui.foeHpFill.classList.toggle("low", wp < 0.35);
@@ -693,9 +832,30 @@
   function drawBattleSprites(shakeX = 0) {
     battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
     allyCtx.clearRect(0, 0, allyCanvas.width, allyCanvas.height);
-    if (state.wild) drawCreature(battleCtx, state.wild.species, battleCanvas.width / 2 + shakeX, battleCanvas.height / 2 + 8, 1.05);
+    const ba = state.battleAnim || {};
+    if (state.wild) {
+      drawCreature(
+        battleCtx,
+        state.wild.species,
+        battleCanvas.width / 2 + shakeX + (ba.shake || 0),
+        battleCanvas.height / 2 + 8,
+        1.05,
+        state.animTime,
+        { lunge: ba.foeLunge || 0, phase: 1 }
+      );
+    }
     const ally = lead();
-    if (ally) drawCreature(allyCtx, getCreatureById(ally.id), allyCanvas.width / 2, allyCanvas.height / 2 + 6, 0.85);
+    if (ally) {
+      drawCreature(
+        allyCtx,
+        getCreatureById(ally.id),
+        allyCanvas.width / 2,
+        allyCanvas.height / 2 + 6,
+        0.85,
+        state.animTime,
+        { lunge: ba.allyLunge || 0, mirror: true, phase: 2 }
+      );
+    }
   }
 
   function showMoves() {
@@ -706,8 +866,9 @@
     ui.moveActions.innerHTML = "";
     sp.moves.forEach((move) => {
       const btn = document.createElement("button");
-      btn.className = "cta";
-      btn.textContent = move.name;
+      btn.className = "cta battle-move-btn";
+      btn.innerHTML = `<span>${move.name}</span><small>${formatMove(move)}</small>`;
+      btn.title = `${move.desc || ""} ${move.effect ? moveEffectLabel(move) : ""}`.trim();
       btn.onclick = () => playerAttack(move);
       ui.moveActions.appendChild(btn);
     });
@@ -727,35 +888,130 @@
     ui.moveActions.classList.add("hidden");
     const ally = lead();
     const sp = getCreatureById(ally.id);
-    const { dmg, mult } = damageAmount(memberAttack(ally), calcStat(state.wild.species.base.def, state.wild.level), move, move.type, state.wild.species.type);
-    state.wild.hp = Math.max(0, state.wild.hp - dmg);
-    let msg = `${sp.name} used ${move.name}! (${dmg})`;
+
+    const start = tickStatusStart(ally, sp.name);
+    let msgParts = [];
+    if (start.log) msgParts.push(start.log);
+    if (start.skip) {
+      ui.battleLog.textContent = msgParts.join(" ");
+      updateBattleBars();
+      drawBattleSprites();
+      setTimeout(() => foeTurn(), 650);
+      return;
+    }
+
+    if (!rollMoveHit(move, ally)) {
+      sfx("miss");
+      ui.battleLog.textContent = `${sp.name} used ${move.name}… but it missed!`;
+      updateBattleBars();
+      setTimeout(() => foeTurn(), 650);
+      return;
+    }
+
+    state.battleAnim.allyLunge = 18;
+    const { dmg, mult } = damageAmount(
+      memberAttack(ally),
+      calcStat(state.wild.species.base.def, state.wild.level),
+      move,
+      move.type,
+      state.wild.species.type,
+      statusAttackMod(ally),
+      statusDefenseMod(state.wild)
+    );
+    // self-buff moves with low power still apply
+    if (move.power > 0) state.wild.hp = Math.max(0, state.wild.hp - dmg);
+    sfx("hit");
+    let msg = `${sp.name} used ${move.name}!`;
+    if (move.power > 0) msg += ` (${dmg})`;
     if (mult > 1) msg += " It's strong!";
-    if (mult < 1) msg += " It's weak…";
+    if (mult < 1 && move.power > 0) msg += " It's weak…";
+    const eff = tryInflictMoveEffect(move, ally, state.wild, sp.name, state.wild.species.name);
+    if (eff) {
+      msg += " " + eff;
+      sfx("status");
+    }
+    const chip = tickStatusEnd(ally, sp.name);
+    if (chip) msg += " " + chip;
     ui.battleLog.textContent = msg;
     updateBattleBars();
     drawBattleSprites();
-    setTimeout(() => (state.wild.hp <= 0 ? winBattle() : foeTurn()), 650);
+    setTimeout(() => {
+      state.battleAnim.allyLunge = 0;
+      if (state.wild.hp <= 0) winBattle();
+      else foeTurn();
+    }, 700);
   }
 
   function foeTurn() {
     const ally = lead();
     const foe = state.wild;
+    if (!foe) return;
+
+    const start = tickStatusStart(foe, `Wild ${foe.species.name}`);
+    if (start.log) ui.battleLog.textContent = start.log;
+    if (start.skip) {
+      const chip = tickStatusEnd(foe, `Wild ${foe.species.name}`);
+      if (chip) ui.battleLog.textContent += " " + chip;
+      updateBattleBars();
+      drawBattleSprites();
+      setTimeout(() => {
+        if (foe.hp <= 0) winBattle();
+        else {
+          state.battleBusy = false;
+          ui.mainActions.classList.remove("hidden");
+        }
+      }, 650);
+      return;
+    }
+
     const move = foe.species.moves[Math.floor(Math.random() * foe.species.moves.length)];
-    const { dmg } = damageAmount(calcStat(foe.species.base.atk, foe.level), memberDefense(ally), move, move.type, getCreatureById(ally.id).type);
-    ally.hp = Math.max(0, ally.hp - dmg);
-    ui.battleLog.textContent = `Wild ${foe.species.name} used ${move.name}! (${dmg})`;
+    if (!rollMoveHit(move, foe)) {
+      sfx("miss");
+      ui.battleLog.textContent = `Wild ${foe.species.name} used ${move.name}… but missed!`;
+      setTimeout(() => {
+        state.battleBusy = false;
+        ui.mainActions.classList.remove("hidden");
+      }, 600);
+      return;
+    }
+
+    state.battleAnim.foeLunge = -16;
+    const { dmg } = damageAmount(
+      calcStat(foe.species.base.atk, foe.level),
+      memberDefense(ally),
+      move,
+      move.type,
+      getCreatureById(ally.id).type,
+      statusAttackMod(foe),
+      statusDefenseMod(ally)
+    );
+    if (move.power > 0) ally.hp = Math.max(0, ally.hp - dmg);
+    sfx("hit");
+    let msg = `Wild ${foe.species.name} used ${move.name}!`;
+    if (move.power > 0) msg += ` (${dmg})`;
+    const eff = tryInflictMoveEffect(move, foe, ally, `Wild ${foe.species.name}`, getCreatureById(ally.id).name);
+    if (eff) {
+      msg += " " + eff;
+      sfx("status");
+    }
+    const chip = tickStatusEnd(foe, `Wild ${foe.species.name}`);
+    if (chip) msg += " " + chip;
+    ui.battleLog.textContent = msg;
     updateBattleBars();
     drawBattleSprites();
     setTimeout(() => {
+      state.battleAnim.foeLunge = 0;
       if (ally.hp <= 0) {
         const next = state.party.find((m) => m.hp > 0);
         if (!next) {
           ui.battleLog.textContent = "Your party fainted… Returning to Petalvale.";
           setTimeout(() => {
-            state.party.forEach((m) => (m.hp = Math.max(1, Math.floor(m.maxHp * 0.4))));
+            state.party.forEach((m) => {
+              m.hp = Math.max(1, Math.floor(m.maxHp * 0.4));
+              m.status = null;
+            });
             endBattle();
-            enterMap("town");
+            enterMap("town", undefined, undefined, { fade: true });
             setMsg("You stumbled back to Petalvale to recover.");
           }, 900);
           return;
@@ -784,6 +1040,7 @@
     if (logs[0]) ui.battleLog.textContent += " " + logs[0];
     updateHud();
     notifyAchievements();
+    sfx("win");
     setTimeout(() => { endBattle(); setMsg(`Won! ${foe.species.name} fled into petals.`); }, 900);
   }
 
@@ -825,8 +1082,10 @@
           }
           updateHud();
           notifyAchievements();
+          sfx("catch");
           setTimeout(() => { endBattle(); checkWin(); }, 900);
         } else {
+          sfx("miss");
           ui.battleLog.textContent = `Oh no! ${state.wild.species.name} broke free!`;
           drawBattleSprites();
           setTimeout(() => foeTurn(), 500);
@@ -842,6 +1101,7 @@
     hideOverlays();
     state.encounterCooldown = 0.7;
     updateHud();
+    playMapMusic();
   }
 
   function checkWin() {
@@ -867,13 +1127,17 @@
         img.alt = creature.name;
         thumb.appendChild(img);
       } else thumb.textContent = "?";
-      const areaLabel = creature.area === "grove" ? "Mist Grove" : creature.area === "shore" ? "Tidebloom Shore" : "Blossom Route";
+      const areaLabel = areaDisplayName(creature.area);
       const info = document.createElement("div");
-      info.innerHTML = `<h3>${owned ? creature.name : "???"}</h3><p>${owned ? creature.description : "Not yet discovered."}</p><p class="hint" style="margin:0.15rem 0 0">${areaLabel}</p>`;
+      const moveHint = owned ? `<p class="hint" style="margin:0.15rem 0 0">${areaLabel} · ${creature.moves.length} moves · click for details</p>` : `<p class="hint" style="margin:0.15rem 0 0">${areaLabel}</p>`;
+      info.innerHTML = `<h3>${owned ? creature.name : "???"}</h3><p>${owned ? creature.description : "Not yet discovered."}</p>${moveHint}`;
       const tag = document.createElement("span");
       tag.className = `type-tag type-${creature.type.toLowerCase()}`;
       tag.textContent = owned ? creature.type : "—";
       li.append(thumb, info, tag);
+      if (owned) {
+        li.onclick = () => openCreatureDetail(creature.id, { returnTo: "dex" });
+      }
       ui.dexList.appendChild(li);
     });
   }
@@ -897,17 +1161,7 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // fence overlay hint on pen
-    if (state.mapId === "pen") {
-      for (let y = 0; y < MAP_H; y++) {
-        for (let x = 0; x < MAP_W; x++) {
-          if (getTileOn("pen", x, y) === TILE.FENCE) {
-            ctx.fillStyle = "rgba(140, 100, 70, 0.18)";
-            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-          }
-        }
-      }
-    }
+    drawSolidHints(ctx, state.mapId, state.animTime);
 
     if (map.encounter) {
       for (let y = 0; y < MAP_H; y++) {
@@ -920,7 +1174,28 @@
       }
     }
 
-    (map.warps || []).forEach((w) => drawWarp(ctx, w, state.animTime));
+    // de-dupe warp visuals when multiple tiles share a destination edge
+    const seenWarp = new Set();
+    (map.warps || []).forEach((w) => {
+      const key = `${w.to}:${w.dir || ""}:${w.label}`;
+      if (seenWarp.has(key)) return;
+      seenWarp.add(key);
+      drawWarp(ctx, w, state.animTime);
+      // tiny label
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "#fff8fb";
+      ctx.strokeStyle = "rgba(74,42,50,0.45)";
+      ctx.lineWidth = 3;
+      ctx.font = "600 10px Quicksand, sans-serif";
+      ctx.textAlign = "center";
+      const label = (w.label || "").replace(/^[↓↑→←]\s*/, "");
+      const lx = w.x * TILE_SIZE + 16;
+      const ly = w.y * TILE_SIZE - 2;
+      ctx.strokeText(label, lx, ly);
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    });
     (map.npcs || []).forEach((n) => drawNpc(ctx, n, state.animTime));
 
     // pen creatures
@@ -946,7 +1221,7 @@
     }
 
     const p = state.player;
-    drawPlayer(ctx, p.px, p.py, p.facing, p.step, state.cosmetics.outfit, state.cosmetics.accessory, state.animTime);
+    drawPlayer(ctx, p.px, p.py, p.facing, p.step, state.cosmetics.outfit, state.cosmetics.accessory, state.animTime, p.moving);
 
     const g = ctx.createRadialGradient(320, 240, 150, 320, 240, 430);
     g.addColorStop(0, "rgba(0,0,0,0)");
@@ -961,7 +1236,7 @@
     w: "up", W: "up", s: "down", S: "down", a: "left", A: "left", d: "right", D: "right",
   };
 
-  const menuModes = ["party", "bag", "dex", "shop", "skills", "style", "pen"];
+  const menuModes = ["party", "bag", "dex", "shop", "skills", "style", "pen", "detail"];
 
   window.addEventListener("keydown", (e) => {
     if (e.key === " " || e.code === "Space") {
@@ -971,6 +1246,7 @@
       return;
     }
     if (e.key === "Escape") {
+      if (state.mode === "detail") { closeDetail(); return; }
       if (menuModes.includes(state.mode)) closeMenuToPlay();
       return;
     }
@@ -991,11 +1267,18 @@
 
   document.querySelectorAll(".starter-card[data-starter]").forEach((card) => {
     card.addEventListener("click", () => {
+      const id = card.dataset.starter;
+      if (state.starter === id && card.classList.contains("selected")) {
+        openCreatureDetail(id, { returnTo: "title" });
+        return;
+      }
       document.querySelectorAll(".starter-card[data-starter]").forEach((c) => c.classList.remove("selected"));
       card.classList.add("selected");
-      state.starter = card.dataset.starter;
+      state.starter = id;
       ui.btnStart.disabled = false;
       ui.btnStart.textContent = `Start with ${getCreatureById(state.starter).name}`;
+      sfx("ui");
+      if (!state.muted) AudioBus.creatureCry(getCreatureById(id).type);
     });
   });
 
@@ -1018,6 +1301,28 @@
   document.getElementById("btn-bag-close").addEventListener("click", closeMenuToPlay);
   document.getElementById("btn-dex").addEventListener("click", () => (state.mode === "dex" ? closeMenuToPlay() : openDex()));
   document.getElementById("btn-dex-close").addEventListener("click", closeMenuToPlay);
+  document.getElementById("btn-detail-close").addEventListener("click", closeDetail);
+  ui.loc.addEventListener("change", () => {
+    const id = ui.loc.value;
+    if (!id || id === state.mapId) return;
+    AudioBus.unlock();
+    travelTo(id);
+  });
+  ui.btnMute.addEventListener("click", () => {
+    state.muted = !state.muted;
+    ui.btnMute.textContent = state.muted ? "MUTE" : "♪";
+    if (state.muted) AudioBus.stopMusic();
+    else {
+      AudioBus.unlock();
+      playMapMusic();
+    }
+  });
+  // unlock audio on first gesture
+  ["pointerdown", "keydown"].forEach((ev) => {
+    window.addEventListener(ev, () => AudioBus.unlock().then(() => {
+      if (!state.muted && (state.mode === "title" || state.mode === "play" || state.mode === "battle")) playMapMusic();
+    }), { once: true });
+  });
   document.getElementById("btn-fight").addEventListener("click", () => { if (!state.battleBusy) showMoves(); });
   document.getElementById("btn-throw").addEventListener("click", tryCatch);
   document.getElementById("btn-item").addEventListener("click", () => {
@@ -1035,6 +1340,7 @@
     state.battleBusy = true;
     ui.mainActions.classList.add("hidden");
     ui.battleLog.textContent = `Used item! (+${ally.hp - before} HP)`;
+    sfx("heal");
     updateBattleBars();
     updateHud();
     setTimeout(() => foeTurn(), 600);
@@ -1081,6 +1387,13 @@
     last = now;
     state.animTime += dt;
     state.grassWave += dt * 3;
+    if (state.walkSfxCd > 0) state.walkSfxCd -= dt;
+    if (state.battleAnim) {
+      state.battleAnim.allyLunge *= Math.max(0, 1 - dt * 8);
+      state.battleAnim.foeLunge *= Math.max(0, 1 - dt * 8);
+      if (Math.abs(state.battleAnim.allyLunge) < 0.5) state.battleAnim.allyLunge = 0;
+      if (Math.abs(state.battleAnim.foeLunge) < 0.5) state.battleAnim.foeLunge = 0;
+    }
     for (const p of state.petals) {
       p.y += p.sp * dt;
       p.x += Math.sin(state.animTime * 1.4 + p.phase) * p.drift * dt;
@@ -1088,7 +1401,7 @@
     }
     if (state.encounterCooldown > 0) state.encounterCooldown -= dt;
 
-    if (state.mode === "play") {
+    if (state.mode === "play" && state.transition <= 0) {
       const p = state.player;
       if (p.moving) {
         p.t += dt / MOVE_DURATION;
@@ -1106,6 +1419,12 @@
     }
 
     if (state.ready) drawWorld();
+    if (state.mode === "battle") drawBattleSprites();
+    if (state.mode === "detail" && state.detailId) {
+      const sp = getCreatureById(state.detailId);
+      detailCtx.clearRect(0, 0, detailCanvas.width, detailCanvas.height);
+      drawCreature(detailCtx, sp, detailCanvas.width / 2, detailCanvas.height / 2 + 6, 1.05, state.animTime);
+    }
     requestAnimationFrame(frame);
   }
 
@@ -1123,8 +1442,9 @@
         sky.style.backgroundSize = "cover";
         sky.style.backgroundPosition = "center";
       }
-      setMsg("Choose a starter to begin.");
+      setMsg("Choose a starter to begin. Click a card twice to preview moves.");
       drawWorld();
+      playMapMusic();
     })
     .catch((err) => {
       console.error(err);

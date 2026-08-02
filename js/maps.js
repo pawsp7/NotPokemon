@@ -1,4 +1,4 @@
-/** Multi-screen maps with NPC sprites, icons, and hitboxes */
+/** Multi-screen maps with NPC sprites, icons, hitboxes, path-aligned warps */
 
 const TILE = {
   GRASS: 0,
@@ -10,6 +10,8 @@ const TILE = {
   ROCK: 6,
   FLOOR: 7,
   FENCE: 8,
+  BUILDING: 9,
+  LEDGE: 10,
 };
 
 const TILE_SIZE = 32;
@@ -17,7 +19,14 @@ const MAP_W = 20;
 const MAP_H = 15;
 
 function isSolid(tile) {
-  return tile === TILE.TREE || tile === TILE.WATER || tile === TILE.ROCK || tile === TILE.FENCE;
+  return (
+    tile === TILE.TREE ||
+    tile === TILE.WATER ||
+    tile === TILE.ROCK ||
+    tile === TILE.FENCE ||
+    tile === TILE.BUILDING ||
+    tile === TILE.LEDGE
+  );
 }
 
 const MAPS = {
@@ -27,37 +36,40 @@ const MAPS = {
     bg: "town",
     encounter: false,
     start: { x: 10, y: 12 },
+    // Buildings, fences, water, crystal, stall blocked; paths kept open
     grid: [
-      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-      [3, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 3],
-      [3, 7, 6, 7, 7, 5, 7, 7, 7, 6, 7, 7, 7, 5, 7, 7, 7, 6, 7, 3],
+      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      [3, 9, 9, 9, 8, 7, 7, 7, 9, 9, 1, 9, 9, 7, 9, 9, 9, 9, 7, 3],
+      [3, 9, 9, 9, 8, 5, 7, 7, 9, 9, 1, 9, 9, 5, 9, 9, 9, 9, 7, 3],
+      [3, 8, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+      [3, 7, 5, 1, 9, 9, 9, 7, 7, 1, 7, 7, 7, 9, 9, 7, 1, 5, 7, 3],
+      [3, 7, 7, 1, 9, 9, 9, 7, 7, 1, 7, 7, 9, 9, 9, 7, 1, 7, 7, 3],
       [3, 7, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 7, 3],
-      [3, 7, 7, 1, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 1, 7, 7, 3],
-      [3, 7, 5, 1, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 1, 5, 7, 3],
-      [3, 7, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7, 7, 3],
-      [3, 7, 7, 1, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 1, 7, 7, 3],
-      [3, 7, 7, 1, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 1, 7, 7, 3],
-      [3, 7, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 7, 3],
-      [3, 7, 7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 3],
-      [3, 7, 7, 7, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 3],
-      [3, 7, 7, 5, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 7, 5, 7, 7, 7, 3],
+      [3, 4, 4, 1, 7, 7, 7, 7, 6, 6, 6, 7, 7, 7, 7, 7, 1, 7, 5, 3],
+      [3, 4, 4, 1, 7, 7, 7, 7, 6, 7, 6, 7, 7, 9, 9, 7, 1, 7, 7, 3],
+      [3, 7, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3],
+      [3, 9, 9, 9, 7, 7, 7, 7, 7, 1, 7, 7, 7, 7, 9, 9, 9, 4, 4, 3],
+      [3, 9, 9, 9, 7, 5, 7, 7, 7, 1, 7, 7, 5, 7, 9, 9, 9, 4, 4, 3],
+      [3, 8, 8, 1, 1, 1, 7, 7, 7, 1, 7, 7, 7, 1, 1, 1, 8, 8, 7, 3],
       [3, 7, 7, 7, 7, 7, 7, 7, 1, 1, 1, 7, 7, 7, 7, 7, 7, 7, 7, 3],
-      [3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      [3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3],
     ],
     warps: [
-      { x: 9, y: 14, to: "route", tx: 2, ty: 2, label: "to Blossom Route", icon: "warp" },
-      { x: 16, y: 9, to: "pen", tx: 3, ty: 12, label: "to Creature Pen", icon: "pen" },
+      { x: 10, y: 14, to: "route", tx: 10, ty: 2, label: "↓ Blossom Route", icon: "warp", dir: "down" },
+      { x: 9, y: 14, to: "route", tx: 10, ty: 2, label: "↓ Blossom Route", icon: "warp", dir: "down" },
+      { x: 18, y: 9, to: "pen", tx: 4, ty: 12, label: "→ Creature Pen", icon: "pen", dir: "right" },
+      { x: 10, y: 0, to: "route", tx: 10, ty: 2, label: "↑ Blossom Route", icon: "warp", dir: "up" },
     ],
     npcs: [
-      { id: "healer", x: 15, y: 5, name: "Nurse Sakura", kind: "heal", sprite: "nurse", icon: "heal",
+      { id: "healer", x: 15, y: 6, name: "Nurse Sakura", kind: "heal", sprite: "nurse", icon: "heal",
         lines: ["Welcome to the Petal Shrine.", "I'll mend your party's wounds — rest easy."] },
-      { id: "shop", x: 4, y: 5, name: "Vendor Moss", kind: "shop", sprite: "vendor", icon: "shop",
+      { id: "shop", x: 4, y: 6, name: "Vendor Moss", kind: "shop", sprite: "vendor", icon: "shop",
         lines: ["Petal goods and boutique looks!", "Orbs, tonics, and outfits await."] },
-      { id: "guide", x: 10, y: 8, name: "Elder Bloom", kind: "talk", sprite: "elder", icon: "talk",
+      { id: "guide", x: 10, y: 9, name: "Elder Bloom", kind: "talk", sprite: "elder", icon: "talk",
         lines: [
           "Catch creatures, raise skills, and style your look.",
-          "South is Blossom Route. East of the route is Mist Grove.",
-          "South of the route lies Tidebloom Shore. The Pen is east in town.",
+          "South stairs lead to Blossom Route. East path opens the Pen.",
+          "Use the location menu above to teleport between areas.",
         ] },
       { id: "stylist", x: 7, y: 4, name: "Tailor Pip", kind: "style", sprite: "scout", icon: "mirror",
         lines: ["Need a new cloak or clip?", "Open the Style menu anytime with C — or talk to me!"] },
@@ -69,34 +81,36 @@ const MAPS = {
     name: "Blossom Route",
     bg: "route",
     encounter: true,
-    start: { x: 2, y: 2 },
+    start: { x: 10, y: 2 },
+    // Path spine north→south center, east branch to grove, ledges & trees solid
     grid: [
-      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-      [3, 0, 5, 0, 0, 2, 2, 0, 0, 5, 0, 0, 0, 2, 2, 0, 6, 0, 5, 3],
-      [3, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 3],
-      [3, 5, 1, 0, 0, 2, 2, 1, 1, 1, 1, 1, 0, 2, 2, 0, 0, 1, 0, 3],
-      [3, 0, 1, 0, 2, 2, 2, 0, 0, 5, 0, 1, 0, 2, 2, 2, 0, 1, 5, 3],
-      [3, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 2, 0, 6, 1, 0, 3],
-      [3, 5, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 3],
-      [3, 0, 4, 4, 0, 0, 5, 0, 1, 0, 2, 2, 0, 0, 0, 0, 0, 1, 5, 3],
-      [3, 0, 4, 4, 4, 0, 0, 0, 1, 1, 1, 1, 1, 0, 2, 2, 0, 1, 0, 3],
-      [3, 5, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 1, 1, 1, 2, 0, 1, 0, 3],
-      [3, 0, 2, 2, 0, 0, 0, 0, 5, 0, 2, 0, 0, 0, 1, 1, 1, 1, 5, 3],
-      [3, 0, 2, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 2, 0, 0, 3],
-      [3, 5, 0, 0, 1, 1, 1, 0, 0, 5, 0, 0, 1, 1, 1, 2, 0, 0, 6, 3],
-      [3, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5, 0, 0, 3],
-      [3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      [3, 0, 5, 0, 2, 2, 0, 10, 10, 10, 1, 10, 10, 10, 0, 2, 6, 0, 5, 3],
+      [3, 0, 0, 0, 2, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 3],
+      [3, 5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 3],
+      [3, 0, 1, 0, 2, 2, 2, 0, 0, 5, 1, 0, 2, 2, 2, 0, 0, 1, 5, 3],
+      [3, 0, 1, 0, 2, 2, 0, 0, 0, 0, 1, 0, 0, 2, 2, 0, 6, 1, 0, 3],
+      [3, 5, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 3],
+      [3, 0, 0, 4, 4, 0, 5, 0, 1, 0, 1, 0, 0, 0, 4, 4, 0, 1, 5, 3],
+      [3, 0, 0, 4, 4, 4, 0, 0, 1, 1, 1, 1, 1, 1, 4, 4, 0, 1, 1, 1],
+      [3, 5, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 3],
+      [3, 0, 2, 2, 0, 0, 0, 0, 5, 0, 1, 0, 2, 1, 1, 2, 0, 0, 5, 3],
+      [3, 0, 2, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 0, 0, 3],
+      [3, 5, 0, 0, 0, 0, 1, 0, 0, 5, 1, 0, 0, 0, 0, 2, 0, 0, 6, 3],
+      [3, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5, 0, 0, 3],
+      [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3],
     ],
     warps: [
-      { x: 2, y: 1, to: "town", tx: 9, ty: 12, label: "to Petalvale", icon: "warp" },
-      { x: 18, y: 8, to: "grove", tx: 2, ty: 7, label: "to Mist Grove", icon: "warp" },
-      { x: 5, y: 14, to: "shore", tx: 10, ty: 2, label: "to Tidebloom Shore", icon: "warp" },
+      { x: 10, y: 0, to: "town", tx: 10, ty: 13, label: "↑ Petalvale", icon: "warp", dir: "up" },
+      { x: 19, y: 8, to: "grove", tx: 2, ty: 7, label: "→ Mist Grove", icon: "warp", dir: "right" },
+      { x: 18, y: 8, to: "grove", tx: 2, ty: 7, label: "→ Mist Grove", icon: "warp", dir: "right" },
+      { x: 10, y: 14, to: "shore", tx: 10, ty: 2, label: "↓ Tidebloom Shore", icon: "warp", dir: "down" },
     ],
     npcs: [
-      { id: "scout", x: 11, y: 6, name: "Scout Hana", kind: "talk", sprite: "scout", icon: "talk",
+      { id: "scout", x: 12, y: 6, name: "Scout Hana", kind: "talk", sprite: "scout", icon: "talk",
         lines: [
           "Tall grass hides the first five creatures.",
-          "East is Mist Grove. South path leads to Tidebloom Shore.",
+          "North stairs return to town. East path enters Mist Grove. South path reaches the shore.",
         ] },
     ],
   },
@@ -115,7 +129,7 @@ const MAPS = {
       [3, 0, 1, 0, 2, 1, 1, 1, 1, 1, 0, 2, 2, 0, 0, 0, 0, 1, 5, 3],
       [3, 0, 1, 0, 0, 0, 0, 5, 0, 1, 0, 0, 2, 2, 2, 0, 6, 1, 0, 3],
       [3, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 0, 0, 0, 1, 0, 3],
-      [3, 1, 1, 0, 0, 4, 4, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 3],
+      [1, 1, 1, 0, 0, 4, 4, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 3],
       [3, 0, 1, 0, 0, 4, 4, 4, 0, 5, 0, 2, 2, 0, 0, 0, 0, 1, 5, 3],
       [3, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 5, 0, 1, 0, 3],
       [3, 5, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 2, 0, 0, 0, 0, 1, 0, 3],
@@ -124,7 +138,10 @@ const MAPS = {
       [3, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 3],
       [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
     ],
-    warps: [{ x: 1, y: 7, to: "route", tx: 17, ty: 8, label: "to Blossom Route", icon: "warp" }],
+    warps: [
+      { x: 0, y: 7, to: "route", tx: 17, ty: 8, label: "← Blossom Route", icon: "warp", dir: "left" },
+      { x: 1, y: 7, to: "route", tx: 17, ty: 8, label: "← Blossom Route", icon: "warp", dir: "left" },
+    ],
     npcs: [
       { id: "mystic", x: 9, y: 4, name: "Mystic Rei", kind: "talk", sprite: "mystic", icon: "talk",
         lines: [
@@ -157,7 +174,7 @@ const MAPS = {
       [3, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 5, 0, 0, 3],
       [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
     ],
-    warps: [{ x: 10, y: 0, to: "route", tx: 5, ty: 13, label: "to Blossom Route", icon: "warp" }],
+    warps: [{ x: 10, y: 0, to: "route", tx: 10, ty: 13, label: "↑ Blossom Route", icon: "warp", dir: "up" }],
     npcs: [
       { id: "tidekeeper", x: 14, y: 6, name: "Tidekeeper Ume", kind: "talk", sprite: "mystic", icon: "talk",
         lines: [
@@ -172,7 +189,7 @@ const MAPS = {
     name: "Creature Pen",
     bg: "pen",
     encounter: false,
-    start: { x: 3, y: 12 },
+    start: { x: 4, y: 12 },
     grid: [
       [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
       [3, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 3],
@@ -190,18 +207,26 @@ const MAPS = {
       [3, 8, 8, 8, 1, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 3],
       [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
     ],
-    // display slots for stored / viewed creatures
     pens: [
       { x: 4, y: 4 }, { x: 7, y: 4 }, { x: 12, y: 4 }, { x: 15, y: 4 },
       { x: 4, y: 7 }, { x: 7, y: 7 }, { x: 12, y: 7 }, { x: 15, y: 7 },
     ],
-    warps: [{ x: 4, y: 13, to: "town", tx: 15, ty: 9, label: "to Petalvale", icon: "warp" }],
+    warps: [{ x: 4, y: 13, to: "town", tx: 17, ty: 9, label: "← Petalvale", icon: "warp", dir: "down" }],
     npcs: [
       { id: "keeper", x: 9, y: 11, name: "Pen Keeper Ren", kind: "pen", sprite: "vendor", icon: "pen",
         lines: ["Welcome to the Creature Pen!", "Deposit party friends here, or admire your Dex blooms."] },
     ],
   },
 };
+
+/** Teleport destinations for the location dropdown */
+const TRAVEL_POINTS = [
+  { id: "town", name: "Petalvale", x: 10, y: 12 },
+  { id: "route", name: "Blossom Route", x: 10, y: 3 },
+  { id: "grove", name: "Mist Grove", x: 2, y: 7 },
+  { id: "shore", name: "Tidebloom Shore", x: 10, y: 2 },
+  { id: "pen", name: "Creature Pen", x: 4, y: 12 },
+];
 
 function getMap(id) {
   return MAPS[id];
@@ -241,13 +266,16 @@ function tileBlocked(mapId, x, y) {
  */
 function canOccupyPixels(mapId, px, py) {
   const box = playerHitbox(px, py);
-  const tiles = [
-    [Math.floor(box.x / TILE_SIZE), Math.floor(box.y / TILE_SIZE)],
-    [Math.floor((box.x + box.w - 1) / TILE_SIZE), Math.floor(box.y / TILE_SIZE)],
-    [Math.floor(box.x / TILE_SIZE), Math.floor((box.y + box.h - 1) / TILE_SIZE)],
-    [Math.floor((box.x + box.w - 1) / TILE_SIZE), Math.floor((box.y + box.h - 1) / TILE_SIZE)],
+  const samples = [
+    [box.x, box.y],
+    [box.x + box.w - 1, box.y],
+    [box.x, box.y + box.h - 1],
+    [box.x + box.w - 1, box.y + box.h - 1],
+    [box.x + box.w / 2, box.y + box.h / 2],
   ];
-  for (const [tx, ty] of tiles) {
+  for (const [sx, sy] of samples) {
+    const tx = Math.floor(sx / TILE_SIZE);
+    const ty = Math.floor(sy / TILE_SIZE);
     if (isSolid(getTileOn(mapId, tx, ty))) return false;
   }
   const map = getMap(mapId);
