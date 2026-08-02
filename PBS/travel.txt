@@ -1,0 +1,6 @@
+# MapId,Name,X,Y
+town,Petalvale,10,12
+route,Blossom Route,10,3
+grove,Mist Grove,2,7
+shore,Tidebloom Shore,10,2
+pen,Creature Pen,4,12

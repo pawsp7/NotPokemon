@@ -1,0 +1,5 @@
+# InternalName,Name,Unlock,Price,Achieve,Description,Charset
+CLOAK_PINK,Petal Cloak,start,0,,Your starting travel cloak.,$Player_cloak_pink
+COAT_MINT,Mint Trek Coat,shop,45,,Fresh green for long walks.,$Player_coat_mint
+CAPE_LAVENDER,Lavender Cape,shop,60,,A soft mage's wrap.,$Player_cape_lavender
+VEST_CORAL,Coral Vest,achieve,0,shore1,Bright explorer gear.,$Player_vest_coral

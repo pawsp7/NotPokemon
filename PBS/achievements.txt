@@ -1,0 +1,8 @@
+# InternalName,Name,Description
+CATCH5,Bloom Buddy,Record 5 creatures in the Dex.
+CATCH10,Petal Scholar,Record 10 creatures in the Dex.
+CATCH15,Tide Archivist,Record all 15 creatures.
+GROVE3,Mist Walker,Catch 3 Mist Grove creatures.
+SHORE1,Shore Strider,Catch your first Tidebloom Shore creature.
+BATTLES10,Petal Pugilist,Win 10 wild battles.
+PEN3,Caretaker,Keep 3 creatures in the Pen.

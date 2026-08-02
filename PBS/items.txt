@@ -1,0 +1,4 @@
+# InternalName,Name,Price,Description
+ORB,Catch Orb,12,Used to catch wild creatures.
+POTION,Petal Tonic,10,Restores 28 HP to one ally.
+HI_POTION,Bloom Balm,22,Restores 55 HP to one ally.

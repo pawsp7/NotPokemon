@@ -1,0 +1,11 @@
+# InternalName,Name,Description
+BURN,Burn,Takes light fire chip damage each turn.
+POISON,Poison,Takes poison chip damage each turn.
+SLEEP,Sleep,May skip turns until waking.
+FREEZE,Freeze,May skip turns until thawing.
+WET,Soaked,Defense softens while soaked.
+POLLEN,Pollen,Accuracy dips in a pollen haze.
+THORNS,Thorns,Attack softens under bramble weight.
+GLOW,Glow,Speed rises in a soft bloom light.
+FOCUS,Focus,Attack rises with clear focus.
+WARD,Ward,Defense rises behind a petal ward.

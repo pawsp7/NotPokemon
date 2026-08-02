@@ -1,0 +1,26 @@
+# Proprietary RPG Maker XP binaries (copy from a blank project — do not commit)
+Game.exe
+*.dll
+Game.rgssad
+
+# User-copied DB stubs from a blank project (keep Scripts.rxdata)
+Data/Actors.rxdata
+Data/Classes.rxdata
+Data/Skills.rxdata
+Data/Items.rxdata
+Data/Weapons.rxdata
+Data/Armors.rxdata
+Data/Enemies.rxdata
+Data/Troops.rxdata
+Data/States.rxdata
+Data/Animations.rxdata
+Data/Tilesets.rxdata
+Data/CommonEvents.rxdata
+Data/System.rxdata
+Data/MapInfos.rxdata
+Data/Map*.rxdata
+
+# OS / editor junk
+Thumbs.db
+.DS_Store
+*~
