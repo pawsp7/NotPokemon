@@ -17,13 +17,16 @@ Hard-refresh if the live page looks stale (`Ctrl+Shift+R` / `Cmd+Shift+R`).
 | Key | Action |
 |-----|--------|
 | WASD / Arrows | Move |
-| Space | Talk / interact |
+| Space | Talk / interact (skip typing) |
 | P | Party |
 | K | Skills |
 | C | Style closet |
 | B | Bag |
 | E | Dex |
+| V | Save |
 | Esc | Close menu |
+
+Continue from the title screen loads your last save (localStorage).
 
 ## Areas
 

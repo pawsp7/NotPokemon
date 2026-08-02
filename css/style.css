@@ -234,16 +234,19 @@ body {
 }
 
 .battle-layout {
-  width: min(480px, 100%);
+  width: min(440px, 100%);
+  max-height: 100%;
   display: grid;
-  gap: 0.85rem;
+  gap: 0.55rem;
+  align-content: start;
 }
 
 .battle-sky {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 260px;
+  min-height: 200px;
+  max-height: 46vh;
   border-radius: var(--radius);
   background:
     radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.35), transparent 40%),
@@ -283,13 +286,18 @@ body {
 }
 
 #battle-sprite {
-  width: 200px;
-  height: 200px;
+  width: min(150px, 28vw);
+  height: min(150px, 28vw);
   image-rendering: auto;
   animation: bob 1.5s ease-in-out infinite;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 10px 18px rgba(74, 42, 50, 0.25));
+}
+
+#ally-sprite {
+  width: min(120px, 22vw);
+  height: min(120px, 22vw);
 }
 
 @keyframes bob {
@@ -332,20 +340,62 @@ body {
 .type-psychic { color: #a070c0; }
 
 .battle-log {
-  padding: 0.9rem 1rem;
+  padding: 0.65rem 0.85rem;
   border-radius: 12px;
   background: var(--panel);
   border: 2px solid var(--panel-edge);
-  min-height: 3.2rem;
-  font-size: 1rem;
+  min-height: 2.6rem;
+  max-height: 4.4rem;
+  overflow: auto;
+  font-size: 0.95rem;
   color: var(--ink);
+  line-height: 1.35;
 }
 
 .battle-actions {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.battle-main-grid,
+.battle-move-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.battle-main-grid .cta,
+.battle-main-grid .ghost,
+.battle-move-grid .cta,
+.battle-move-grid .ghost {
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.92rem;
+}
+
+.battle-move-grid .battle-move-btn {
+  min-height: 3.1rem;
+}
+
+.battle-move-grid .ghost {
+  grid-column: 1 / -1;
+}
+
+.title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+  margin-top: 0.35rem;
+}
+
+.title-actions .cta,
+.title-actions .ghost {
+  min-width: 9rem;
 }
 
 .dex-panel {
@@ -481,7 +531,7 @@ body {
 
 .dlg-text {
   margin: 0 0 1rem;
-  min-height: 3rem;
+  min-height: 3.2rem;
   line-height: 1.45;
 }
 
@@ -788,15 +838,20 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.15rem;
+  justify-content: center;
+  gap: 0.1rem;
   text-align: left;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .battle-move-btn small {
   font-weight: 600;
   opacity: 0.85;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .transition-veil {

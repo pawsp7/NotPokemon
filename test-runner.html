@@ -17,6 +17,7 @@ function ok(name, cond) { lines.push((cond ? 'OK  ' : 'FAIL') + ' ' + name); if 
 (async () => {
   try {
     ok('15 creatures', CREATURES.length === 15);
+    ok('2 moves each', CREATURES.every(c => activeMoves(c).length === 2));
     ok('moves have power', CREATURES.every(c => c.moves.every(m => typeof m.power === 'number')));
     ok('moves have effect field', CREATURES.every(c => c.moves.every(m => 'effect' in m)));
     ok('formatMove', formatMove(CREATURES[0].moves[0]).includes('dmg'));

@@ -67,6 +67,8 @@
     detailMoves: document.getElementById("detail-moves"),
     detailStatus: document.getElementById("detail-status"),
     btnMute: document.getElementById("btn-mute"),
+    btnSave: document.getElementById("btn-save"),
+    btnContinue: document.getElementById("btn-continue"),
   };
 
   const state = {
@@ -102,11 +104,19 @@
     transition: 0,
     muted: false,
     walkSfxCd: 0,
+    textTimer: null,
+    textFull: "",
+    textTarget: null,
+    textDone: true,
+    textResolve: null,
   };
 
   window.__currentMapId = "town";
   const MOVE_DURATION = 0.12;
   const TOTAL_CREATURES = 15;
+  const SAVE_KEY = "routewild-save-v1";
+  const TEXT_MS = 48; // slower typewriter speed (ms per character)
+
 
   for (let i = 0; i < 24; i++) {
     state.petals.push({
@@ -137,6 +147,199 @@
 
   function setMsg(text) {
     ui.msg.textContent = text;
+  }
+
+  function clearTypewriter() {
+    if (state.textTimer) {
+      clearInterval(state.textTimer);
+      state.textTimer = null;
+    }
+    if (state.textResolve) {
+      const r = state.textResolve;
+      state.textResolve = null;
+      r();
+    }
+    state.textDone = true;
+  }
+
+  function skipTypewriter() {
+    if (state.textDone || !state.textTarget) return false;
+    clearInterval(state.textTimer);
+    state.textTimer = null;
+    state.textTarget.textContent = state.textFull;
+    state.textDone = true;
+    if (state.textResolve) {
+      const r = state.textResolve;
+      state.textResolve = null;
+      r();
+    }
+    return true;
+  }
+
+  /** Slow typewriter for dialogue / battle log. Returns a Promise. */
+  function typeText(el, text, { instant = false } = {}) {
+    clearTypewriter();
+    state.textTarget = el;
+    state.textFull = text == null ? "" : String(text);
+    if (instant || !state.textFull) {
+      el.textContent = state.textFull;
+      state.textDone = true;
+      return Promise.resolve();
+    }
+    state.textDone = false;
+    el.textContent = "";
+    let i = 0;
+    return new Promise((resolve) => {
+      state.textResolve = resolve;
+      state.textTimer = setInterval(() => {
+        i += 1;
+        el.textContent = state.textFull.slice(0, i);
+        if (i >= state.textFull.length) {
+          clearInterval(state.textTimer);
+          state.textTimer = null;
+          state.textDone = true;
+          state.textResolve = null;
+          resolve();
+        }
+      }, TEXT_MS);
+    });
+  }
+
+  function setBattleLog(text, opts) {
+    return typeText(ui.battleLog, text, opts);
+  }
+
+  function serializeMember(m) {
+    return {
+      uid: m.uid, id: m.id, level: m.level, xp: m.xp,
+      hp: m.hp, maxHp: m.maxHp, skills: { ...m.skills },
+      skillPoints: m.skillPoints || 0,
+      status: m.status ? { ...m.status } : null,
+    };
+  }
+
+  function reviveMember(data) {
+    const m = makePartyMember(data.id, data.level);
+    m.uid = data.uid || m.uid;
+    m.xp = data.xp || 0;
+    m.skills = data.skills || { hp: 0, atk: 0, def: 0, spd: 0 };
+    m.skillPoints = data.skillPoints || 0;
+    m.status = data.status || null;
+    refreshMemberStats(m);
+    if (typeof data.hp === "number") m.hp = Math.max(0, Math.min(m.maxHp, data.hp));
+    return m;
+  }
+
+  function buildSavePayload() {
+    return {
+      v: 1,
+      savedAt: Date.now(),
+      mapId: state.mapId,
+      player: { x: state.player.x, y: state.player.y, facing: state.player.facing },
+      money: state.money,
+      inventory: { ...state.inventory },
+      party: state.party.map(serializeMember),
+      storage: state.storage.map(serializeMember),
+      dex: [...state.dex],
+      cosmetics: {
+        unlockedOutfits: [...state.cosmetics.unlockedOutfits],
+        unlockedAccessories: [...state.cosmetics.unlockedAccessories],
+        outfit: state.cosmetics.outfit,
+        accessory: state.cosmetics.accessory,
+        unlockedAchievements: [...(state.cosmetics.unlockedAchievements || [])],
+      },
+      starter: state.starter,
+      battlesWon: state.battlesWon,
+      muted: state.muted,
+    };
+  }
+
+  function hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch (_) { return false; }
+  }
+
+  function saveGame({ quiet = false } = {}) {
+    if (!state.starter || !state.party.length) {
+      if (!quiet) setMsg("Nothing to save yet — start an adventure first.");
+      return false;
+    }
+    if (state.mode === "battle" || state.mode === "title") {
+      if (!quiet) setMsg("Can't save during battle or on the title screen.");
+      return false;
+    }
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(buildSavePayload()));
+      if (!quiet) {
+        sfx("ui");
+        setMsg("Game saved.");
+      }
+      refreshContinueButton();
+      return true;
+    } catch (e) {
+      if (!quiet) setMsg("Save failed — storage may be full or blocked.");
+      return false;
+    }
+  }
+
+  function loadSavePayload() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function applySave(data) {
+    if (!data || !data.party?.length) return false;
+    state.starter = data.starter || data.party[0].id;
+    state.money = data.money ?? 80;
+    state.inventory = { ...defaultInventory(), ...(data.inventory || {}) };
+    state.party = data.party.map(reviveMember);
+    state.storage = (data.storage || []).map(reviveMember);
+    state.dex = new Set(data.dex || []);
+    state.cosmetics = {
+      ...defaultCosmetics(),
+      ...(data.cosmetics || {}),
+      unlockedOutfits: [...(data.cosmetics?.unlockedOutfits || ["cloak_pink"])],
+      unlockedAccessories: [...(data.cosmetics?.unlockedAccessories || ["clip_sakura"])],
+      unlockedAchievements: [...(data.cosmetics?.unlockedAchievements || [])],
+    };
+    state.battlesWon = data.battlesWon || 0;
+    state.muted = !!data.muted;
+    if (ui.btnMute) ui.btnMute.textContent = state.muted ? "MUTE" : "♪";
+    state.wild = null;
+    state.battleBusy = false;
+    state.dialogue = null;
+    state.mode = "play";
+    hideOverlays();
+    const mapId = data.mapId || "town";
+    const x = data.player?.x;
+    const y = data.player?.y;
+    enterMap(mapId, x, y, { skipSave: true, announce: "Welcome back!" });
+    if (data.player?.facing) state.player.facing = data.player.facing;
+    updateHud();
+    playMapMusic();
+    setMsg("Welcome back to Petalvale adventures.");
+    refreshContinueButton();
+    return true;
+  }
+
+  function continueGame() {
+    const data = loadSavePayload();
+    if (!data) {
+      setMsg("No save file found.");
+      return;
+    }
+    AudioBus.unlock();
+    if (!applySave(data)) setMsg("Save file looks corrupted.");
+  }
+
+  function refreshContinueButton() {
+    if (!ui.btnContinue) return;
+    const on = hasSave() && state.mode === "title";
+    ui.btnContinue.classList.toggle("hidden", !on);
   }
 
   function lead() {
@@ -220,9 +423,11 @@
         go();
         state.transition = 0;
         transitionVeil.classList.remove("on");
+        if (state.mode === "play" && state.party.length) saveGame({ quiet: true });
       }, 280);
     } else {
       go();
+      if (state.mode === "play" && state.party.length && !opts.skipSave) saveGame({ quiet: true });
     }
   }
 
@@ -246,6 +451,8 @@
     AudioBus.unlock();
     playMapMusic();
     if (!state.muted) AudioBus.creatureCry(getCreatureById(state.starter).type);
+    saveGame({ quiet: true });
+    refreshContinueButton();
   }
 
   function facingTile() {
@@ -340,16 +547,17 @@
     state.dialogue = { npc, i: 0 };
     state.mode = "dialogue";
     ui.dlgName.textContent = npc.name;
-    ui.dlgText.textContent = npc.lines[0];
     showScreen("dialogue");
+    typeText(ui.dlgText, npc.lines[0]);
   }
 
   function advanceDialogue() {
     if (!state.dialogue) return;
+    if (skipTypewriter()) return;
     const { npc } = state.dialogue;
     state.dialogue.i += 1;
     if (state.dialogue.i < npc.lines.length) {
-      ui.dlgText.textContent = npc.lines[state.dialogue.i];
+      typeText(ui.dlgText, npc.lines[state.dialogue.i]);
       return;
     }
     hideOverlays();
@@ -358,6 +566,7 @@
       sfx("heal");
       setMsg("Your party was fully healed at the Petal Shrine.");
       state.mode = "play";
+      saveGame({ quiet: true });
     } else if (npc.kind === "shop") {
       openShop();
     } else if (npc.kind === "style") {
@@ -508,7 +717,7 @@
       ui.detailStatus.textContent = state.dex.has(sp.id) ? "Documented in your Blossom Dex" : "Not yet discovered";
     }
     ui.detailMoves.innerHTML = "";
-    sp.moves.forEach((move) => {
+    activeMoves(sp).forEach((move) => {
       const li = document.createElement("li");
       li.className = "move-card";
       li.innerHTML = `
@@ -801,7 +1010,7 @@
     ui.battleName.textContent = `${species.name} Lv.${state.wild.level}`;
     ui.battleType.textContent = species.type;
     ui.battleType.className = `type-tag type-${species.type.toLowerCase()}`;
-    ui.battleLog.textContent = `A wild ${species.name} appeared!`;
+    setBattleLog(`A wild ${species.name} appeared!`);
     ui.mainActions.classList.remove("hidden");
     ui.moveActions.classList.add("hidden");
     updateBattleBars();
@@ -864,11 +1073,12 @@
     ui.mainActions.classList.add("hidden");
     ui.moveActions.classList.remove("hidden");
     ui.moveActions.innerHTML = "";
-    sp.moves.forEach((move) => {
+    activeMoves(sp).forEach((move) => {
       const btn = document.createElement("button");
       btn.className = "cta battle-move-btn";
-      btn.innerHTML = `<span>${move.name}</span><small>${formatMove(move)}</small>`;
-      btn.title = `${move.desc || ""} ${move.effect ? moveEffectLabel(move) : ""}`.trim();
+      const meta = `${move.power} · ${move.type}`;
+      btn.innerHTML = `<span>${move.name}</span><small>${meta}</small>`;
+      btn.title = `${formatMove(move)}${move.effect ? " · " + moveEffectLabel(move) : ""}`;
       btn.onclick = () => playerAttack(move);
       ui.moveActions.appendChild(btn);
     });
@@ -893,18 +1103,16 @@
     let msgParts = [];
     if (start.log) msgParts.push(start.log);
     if (start.skip) {
-      ui.battleLog.textContent = msgParts.join(" ");
       updateBattleBars();
       drawBattleSprites();
-      setTimeout(() => foeTurn(), 650);
+      setBattleLog(msgParts.join(" ")).then(() => setTimeout(() => foeTurn(), 400));
       return;
     }
 
     if (!rollMoveHit(move, ally)) {
       sfx("miss");
-      ui.battleLog.textContent = `${sp.name} used ${move.name}… but it missed!`;
       updateBattleBars();
-      setTimeout(() => foeTurn(), 650);
+      setBattleLog(`${sp.name} used ${move.name}… but it missed!`).then(() => setTimeout(() => foeTurn(), 400));
       return;
     }
 
@@ -932,14 +1140,15 @@
     }
     const chip = tickStatusEnd(ally, sp.name);
     if (chip) msg += " " + chip;
-    ui.battleLog.textContent = msg;
     updateBattleBars();
     drawBattleSprites();
-    setTimeout(() => {
-      state.battleAnim.allyLunge = 0;
-      if (state.wild.hp <= 0) winBattle();
-      else foeTurn();
-    }, 700);
+    setBattleLog(msg).then(() => {
+      setTimeout(() => {
+        state.battleAnim.allyLunge = 0;
+        if (state.wild.hp <= 0) winBattle();
+        else foeTurn();
+      }, 350);
+    });
   }
 
   function foeTurn() {
@@ -948,30 +1157,30 @@
     if (!foe) return;
 
     const start = tickStatusStart(foe, `Wild ${foe.species.name}`);
-    if (start.log) ui.battleLog.textContent = start.log;
     if (start.skip) {
+      let line = start.log || "";
       const chip = tickStatusEnd(foe, `Wild ${foe.species.name}`);
-      if (chip) ui.battleLog.textContent += " " + chip;
+      if (chip) line = (line ? line + " " : "") + chip;
       updateBattleBars();
       drawBattleSprites();
-      setTimeout(() => {
+      setBattleLog(line || "…").then(() => setTimeout(() => {
         if (foe.hp <= 0) winBattle();
         else {
           state.battleBusy = false;
           ui.mainActions.classList.remove("hidden");
         }
-      }, 650);
+      }, 350));
       return;
     }
 
-    const move = foe.species.moves[Math.floor(Math.random() * foe.species.moves.length)];
+    const foeMoves = activeMoves(foe.species);
+    const move = foeMoves[Math.floor(Math.random() * foeMoves.length)];
     if (!rollMoveHit(move, foe)) {
       sfx("miss");
-      ui.battleLog.textContent = `Wild ${foe.species.name} used ${move.name}… but missed!`;
-      setTimeout(() => {
+      setBattleLog(`Wild ${foe.species.name} used ${move.name}… but missed!`).then(() => setTimeout(() => {
         state.battleBusy = false;
         ui.mainActions.classList.remove("hidden");
-      }, 600);
+      }, 350));
       return;
     }
 
@@ -996,36 +1205,37 @@
     }
     const chip = tickStatusEnd(foe, `Wild ${foe.species.name}`);
     if (chip) msg += " " + chip;
-    ui.battleLog.textContent = msg;
     updateBattleBars();
     drawBattleSprites();
-    setTimeout(() => {
-      state.battleAnim.foeLunge = 0;
-      if (ally.hp <= 0) {
-        const next = state.party.find((m) => m.hp > 0);
-        if (!next) {
-          ui.battleLog.textContent = "Your party fainted… Returning to Petalvale.";
-          setTimeout(() => {
-            state.party.forEach((m) => {
-              m.hp = Math.max(1, Math.floor(m.maxHp * 0.4));
-              m.status = null;
-            });
-            endBattle();
-            enterMap("town", undefined, undefined, { fade: true });
-            setMsg("You stumbled back to Petalvale to recover.");
-          }, 900);
-          return;
+    setBattleLog(msg).then(() => {
+      setTimeout(() => {
+        state.battleAnim.foeLunge = 0;
+        if (ally.hp <= 0) {
+          const next = state.party.find((m) => m.hp > 0);
+          if (!next) {
+            setBattleLog("Your party fainted… Returning to Petalvale.").then(() => setTimeout(() => {
+              state.party.forEach((m) => {
+                m.hp = Math.max(1, Math.floor(m.maxHp * 0.4));
+                m.status = null;
+              });
+              endBattle();
+              enterMap("town", undefined, undefined, { fade: true });
+              setMsg("You stumbled back to Petalvale to recover.");
+              saveGame({ quiet: true });
+            }, 500));
+            return;
+          }
+          const idx = state.party.indexOf(next);
+          const [n] = state.party.splice(idx, 1);
+          state.party.unshift(n);
+          setBattleLog(`${getCreatureById(n.id).name} steps forward!`);
+          updateBattleBars();
+          drawBattleSprites();
         }
-        const idx = state.party.indexOf(next);
-        const [n] = state.party.splice(idx, 1);
-        state.party.unshift(n);
-        ui.battleLog.textContent = `${getCreatureById(n.id).name} steps forward!`;
-        updateBattleBars();
-        drawBattleSprites();
-      }
-      state.battleBusy = false;
-      ui.mainActions.classList.remove("hidden");
-    }, 700);
+        state.battleBusy = false;
+        ui.mainActions.classList.remove("hidden");
+      }, 350);
+    });
   }
 
   function winBattle() {
@@ -1036,62 +1246,73 @@
     state.money += money;
     state.battlesWon += 1;
     const logs = gainXp(ally, xp);
-    ui.battleLog.textContent = `Defeated ${foe.species.name}! +${xp} XP, +${money}❀`;
-    if (logs[0]) ui.battleLog.textContent += " " + logs[0];
+    let winMsg = `Defeated ${foe.species.name}! +${xp} XP, +${money}❀`;
+    if (logs[0]) winMsg += " " + logs[0];
     updateHud();
     notifyAchievements();
     sfx("win");
-    setTimeout(() => { endBattle(); setMsg(`Won! ${foe.species.name} fled into petals.`); }, 900);
+    setBattleLog(winMsg).then(() => setTimeout(() => {
+      endBattle();
+      setMsg(`Won! ${foe.species.name} fled into petals.`);
+      saveGame({ quiet: true });
+    }, 500));
   }
 
   function tryCatch() {
     if (state.battleBusy || !state.wild) return;
     if ((state.inventory.orb || 0) <= 0) {
-      ui.battleLog.textContent = "No Catch Orbs left!";
+      setBattleLog("No Catch Orbs left!");
       return;
     }
     state.battleBusy = true;
     state.inventory.orb -= 1;
     updateHud();
     ui.mainActions.classList.add("hidden");
-    ui.battleLog.textContent = `You throw a Catch Orb at ${state.wild.species.name}…`;
-    const chance = catchChance(state.wild.species, state.wild.hp / state.wild.maxHp);
-    const success = Math.random() < chance;
-    let shakes = 0;
-    const iv = setInterval(() => {
-      shakes += 1;
-      drawBattleSprites((shakes % 2 === 0 ? 1 : -1) * 7);
-      ui.battleLog.textContent = `The Orb shakes… (${shakes}/3)`;
-      if (shakes >= 3) {
-        clearInterval(iv);
-        if (success) {
-          battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
-          drawOrb(battleCtx, battleCanvas.width / 2, battleCanvas.height / 2);
-          const sp = state.wild.species;
-          state.dex.add(sp.id);
-          const member = makePartyMember(sp.id, state.wild.level);
-          if (state.party.length < 3) {
-            state.party.push(member);
-            ui.battleLog.textContent = `Gotcha! ${sp.name} joined your party!`;
-          } else if (state.storage.length < 8) {
-            state.storage.push(member);
-            ui.battleLog.textContent = `Gotcha! ${sp.name} was sent to the Creature Pen!`;
+    setBattleLog(`You throw a Catch Orb at ${state.wild.species.name}…`).then(() => {
+      const chance = catchChance(state.wild.species, state.wild.hp / state.wild.maxHp);
+      const success = Math.random() < chance;
+      let shakes = 0;
+      const iv = setInterval(() => {
+        shakes += 1;
+        drawBattleSprites((shakes % 2 === 0 ? 1 : -1) * 7);
+        setBattleLog(`The Orb shakes… (${shakes}/3)`, { instant: true });
+        if (shakes >= 3) {
+          clearInterval(iv);
+          if (success) {
+            battleCtx.clearRect(0, 0, battleCanvas.width, battleCanvas.height);
+            drawOrb(battleCtx, battleCanvas.width / 2, battleCanvas.height / 2);
+            const sp = state.wild.species;
+            state.dex.add(sp.id);
+            const member = makePartyMember(sp.id, state.wild.level);
+            let catchMsg;
+            if (state.party.length < 3) {
+              state.party.push(member);
+              catchMsg = `Gotcha! ${sp.name} joined your party!`;
+            } else if (state.storage.length < 8) {
+              state.storage.push(member);
+              catchMsg = `Gotcha! ${sp.name} was sent to the Creature Pen!`;
+            } else {
+              catchMsg = `Gotcha! ${sp.name} recorded in Dex (party & pen full).`;
+              state.money += 8;
+            }
+            updateHud();
+            notifyAchievements();
+            sfx("catch");
+            setBattleLog(catchMsg).then(() => setTimeout(() => {
+              endBattle();
+              checkWin();
+              saveGame({ quiet: true });
+            }, 500));
           } else {
-            ui.battleLog.textContent = `Gotcha! ${sp.name} recorded in Dex (party & pen full).`;
-            state.money += 8;
+            sfx("miss");
+            setBattleLog(`Oh no! ${state.wild.species.name} broke free!`).then(() => {
+              drawBattleSprites();
+              setTimeout(() => foeTurn(), 400);
+            });
           }
-          updateHud();
-          notifyAchievements();
-          sfx("catch");
-          setTimeout(() => { endBattle(); checkWin(); }, 900);
-        } else {
-          sfx("miss");
-          ui.battleLog.textContent = `Oh no! ${state.wild.species.name} broke free!`;
-          drawBattleSprites();
-          setTimeout(() => foeTurn(), 500);
         }
-      }
-    }, 400);
+      }, 550);
+    });
   }
 
   function endBattle() {
@@ -1241,8 +1462,13 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === " " || e.code === "Space") {
       e.preventDefault();
-      if (state.mode === "dialogue") advanceDialogue();
-      else interact();
+      if (state.mode === "dialogue") { advanceDialogue(); return; }
+      if (state.mode === "battle" && !state.textDone) { skipTypewriter(); return; }
+      interact();
+      return;
+    }
+    if ((e.key === "v" || e.key === "V") && state.mode === "play") {
+      saveGame();
       return;
     }
     if (e.key === "Escape") {
@@ -1287,6 +1513,7 @@
     showScreen("title");
     state.mode = "title";
     ui.btnStart.disabled = !state.starter;
+    refreshContinueButton();
   });
   document.getElementById("btn-dlg-next").addEventListener("click", advanceDialogue);
   document.getElementById("btn-shop-close").addEventListener("click", closeMenuToPlay);
@@ -1316,7 +1543,10 @@
       AudioBus.unlock();
       playMapMusic();
     }
+    if (state.party.length) saveGame({ quiet: true });
   });
+  ui.btnSave.addEventListener("click", () => saveGame());
+  ui.btnContinue.addEventListener("click", continueGame);
   // unlock audio on first gesture
   ["pointerdown", "keydown"].forEach((ev) => {
     window.addEventListener(ev, () => AudioBus.unlock().then(() => {
@@ -1328,7 +1558,7 @@
   document.getElementById("btn-item").addEventListener("click", () => {
     if (state.battleBusy) return;
     if ((state.inventory.potion || 0) <= 0 && (state.inventory.hi_potion || 0) <= 0) {
-      ui.battleLog.textContent = "No healing items!";
+      setBattleLog("No healing items!");
       return;
     }
     const itemId = (state.inventory.potion || 0) > 0 ? "potion" : "hi_potion";
@@ -1339,11 +1569,10 @@
     state.inventory[itemId] -= 1;
     state.battleBusy = true;
     ui.mainActions.classList.add("hidden");
-    ui.battleLog.textContent = `Used item! (+${ally.hp - before} HP)`;
     sfx("heal");
     updateBattleBars();
     updateHud();
-    setTimeout(() => foeTurn(), 600);
+    setBattleLog(`Used item! (+${ally.hp - before} HP)`).then(() => setTimeout(() => foeTurn(), 400));
   });
   document.getElementById("btn-flee").addEventListener("click", () => {
     if (state.battleBusy) return;
@@ -1351,8 +1580,7 @@
     else {
       state.battleBusy = true;
       ui.mainActions.classList.add("hidden");
-      ui.battleLog.textContent = "Couldn't escape!";
-      setTimeout(() => foeTurn(), 500);
+      setBattleLog("Couldn't escape!").then(() => setTimeout(() => foeTurn(), 400));
     }
   });
 
@@ -1431,6 +1659,7 @@
   placePlayer(10, 12);
   updateHud();
   showScreen("title");
+  refreshContinueButton();
   setMsg("Loading…");
 
   loadImages()
@@ -1445,6 +1674,7 @@
       setMsg("Choose a starter to begin. Click a card twice to preview moves.");
       drawWorld();
       playMapMusic();
+      refreshContinueButton();
     })
     .catch((err) => {
       console.error(err);
