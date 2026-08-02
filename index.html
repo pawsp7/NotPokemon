@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=exp3" />
+  <link rel="stylesheet" href="css/style.css?v=exp4" />
 </head>
 <body>
   <div id="app">
@@ -17,7 +17,16 @@
         <h1>Routewild</h1>
       </div>
       <div class="hud">
-        <span id="loc-pill" class="hud-pill">Petalvale</span>
+        <label class="loc-menu" title="Travel to a location">
+          <span class="loc-caret" aria-hidden="true">▾</span>
+          <select id="loc-select" class="hud-pill loc-select" aria-label="Travel to location">
+            <option value="town">Petalvale</option>
+            <option value="route">Blossom Route</option>
+            <option value="grove">Mist Grove</option>
+            <option value="shore">Tidebloom Shore</option>
+            <option value="pen">Creature Pen</option>
+          </select>
+        </label>
         <span id="money-count" class="hud-pill">❀ 80</span>
         <span id="orb-count" class="hud-pill">Orbs: 15</span>
         <span id="caught-count" class="hud-pill">Dex: 0/15</span>
@@ -26,6 +35,7 @@
         <button id="btn-style" type="button" class="hud-btn">Style</button>
         <button id="btn-bag" type="button" class="hud-btn">Bag</button>
         <button id="btn-dex" type="button" class="hud-btn">Dex</button>
+        <button id="btn-mute" type="button" class="hud-btn" title="Toggle sound">♪</button>
       </div>
     </header>
 
@@ -196,6 +206,29 @@
             <button type="button" class="ghost dex-tab" data-area="shore">Shore</button>
           </div>
           <ul id="dex-list" class="dex-list"></ul>
+          <p class="hint">Click a discovered creature to open its profile.</p>
+        </div>
+      </section>
+
+      <section id="screen-detail" class="overlay screen hidden" aria-hidden="true">
+        <div class="panel detail-panel">
+          <div class="dex-head">
+            <h2 id="detail-title">Creature</h2>
+            <button id="btn-detail-close" type="button" class="ghost">Close</button>
+          </div>
+          <div class="detail-layout">
+            <div class="detail-hero">
+              <canvas id="detail-sprite" width="180" height="180" aria-label="Creature preview"></canvas>
+              <p id="detail-status" class="detail-status"></p>
+            </div>
+            <div class="detail-info">
+              <p id="detail-meta" class="detail-meta"></p>
+              <p id="detail-desc" class="lede"></p>
+              <p id="detail-stats" class="detail-stats"></p>
+              <h3 class="subhead">Moves</h3>
+              <ul id="detail-moves" class="move-list"></ul>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -215,11 +248,15 @@
     </footer>
   </div>
 
-  <script src="js/creatures.js?v=exp3"></script>
-  <script src="js/maps.js?v=exp3"></script>
-  <script src="js/rpg.js?v=exp3"></script>
-  <script src="js/cosmetics.js?v=exp3"></script>
-  <script src="js/sprites.js?v=exp3"></script>
-  <script src="js/game.js?v=exp3"></script>
+  <div id="transition-veil" class="transition-veil" aria-hidden="true"></div>
+
+  <script src="js/creatures.js?v=exp4"></script>
+  <script src="js/status.js?v=exp4"></script>
+  <script src="js/maps.js?v=exp4"></script>
+  <script src="js/rpg.js?v=exp4"></script>
+  <script src="js/cosmetics.js?v=exp4"></script>
+  <script src="js/audio.js?v=exp4"></script>
+  <script src="js/sprites.js?v=exp4"></script>
+  <script src="js/game.js?v=exp4"></script>
 </body>
 </html>

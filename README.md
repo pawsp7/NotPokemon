@@ -37,8 +37,12 @@ Hard-refresh if the live page looks stale (`Ctrl+Shift+R` / `Cmd+Shift+R`).
 - Character outfits & accessories (shop + achievements)
 - Creature Pen to store/view caught friends
 - Skill points on level-up (HP / ATK / DEF / SPD)
-- Turn battles with type matchups
-- Painted NPCs, warp icons, and pixel hitboxes
+- Turn battles with type matchups, move damage, and status effects
+- Creature profile page (click any party/dex/pen card) with full move details
+- Location dropdown teleport in the HUD
+- Walking animation, creature idle/battle anims, per-area BGM + SFX
+- Collision on buildings, fences, trees, water, rocks, and ledges
+- Glowing path-exit warps aligned to map paths
 
 ## Creatures (15)
 

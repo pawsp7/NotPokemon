@@ -73,14 +73,23 @@ function makeWildFighter(species, playerLevel) {
   };
 }
 
-function damageAmount(attackerAtk, defenderDef, move, attackerType, defenderType) {
+function damageAmount(attackerAtk, defenderDef, move, attackerType, defenderType, atkMod = 1, defMod = 1) {
   const mult = typeMultiplier(move.type, defenderType);
-  const raw = move.power + attackerAtk * 0.55 - defenderDef * 0.3;
+  const raw = move.power + attackerAtk * 0.55 * atkMod - defenderDef * 0.3 * defMod;
   const variance = 0.85 + Math.random() * 0.3;
+  let acc = move.accuracy == null ? 1 : move.accuracy;
+  // pollen haze softens accuracy for the afflicted attacker when passed via atkMod sentinel — handled by caller
   return {
     dmg: Math.max(3, Math.round(raw * mult * variance)),
     mult,
+    accuracy: acc,
   };
+}
+
+function rollMoveHit(move, attacker) {
+  let acc = move.accuracy == null ? 1 : move.accuracy;
+  if (attacker?.status?.id === "pollen") acc *= 0.75;
+  return Math.random() < acc;
 }
 
 function catchChance(species, wildHpRatio, orbBonus = 0) {

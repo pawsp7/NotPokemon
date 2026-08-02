@@ -1,4 +1,4 @@
-/** 10 floral hybrids — Blossom Route + Mist Grove */
+/** 15 floral hybrids — Route, Grove, Shore */
 const TYPES = ["Fairy", "Water", "Grass", "Electric", "Rock", "Ghost", "Dark", "Ice", "Fire", "Psychic"];
 
 const TYPE_CHART = {
@@ -26,8 +26,9 @@ const CREATURES = [
     weight: 26,
     base: { hp: 42, atk: 38, def: 34, spd: 40 },
     moves: [
-      { name: "Petal Tap", power: 18, type: "Fairy" },
-      { name: "Bloom Dash", power: 24, type: "Fairy" },
+      { name: "Petal Tap", power: 18, type: "Fairy", accuracy: 1, desc: "A soft petal cuff.", effect: null },
+      { name: "Bloom Dash", power: 24, type: "Fairy", accuracy: 0.95, desc: "Dashes in a petal swirl.", effect: { id: "glow", chance: 0.35, turns: 3 } },
+      { name: "Sakura Veil", power: 12, type: "Fairy", accuracy: 1, desc: "Raises a shimmering ward.", effect: { id: "ward", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -41,8 +42,9 @@ const CREATURES = [
     weight: 28,
     base: { hp: 40, atk: 36, def: 36, spd: 38 },
     moves: [
-      { name: "Dew Slap", power: 18, type: "Water" },
-      { name: "Lily Splash", power: 24, type: "Water" },
+      { name: "Dew Slap", power: 18, type: "Water", accuracy: 1, desc: "A damp whisker slap.", effect: null },
+      { name: "Lily Splash", power: 24, type: "Water", accuracy: 0.95, desc: "Soaks the foe in pondwater.", effect: { id: "wet", chance: 0.4, turns: 3 } },
+      { name: "Purr Tide", power: 14, type: "Water", accuracy: 1, desc: "A lulling tide that may sleep.", effect: { id: "sleep", chance: 0.25, turns: 2 } },
     ],
   },
   {
@@ -56,8 +58,9 @@ const CREATURES = [
     weight: 24,
     base: { hp: 44, atk: 34, def: 38, spd: 36 },
     moves: [
-      { name: "Leaf Nibble", power: 16, type: "Grass" },
-      { name: "Fern Whip", power: 22, type: "Grass" },
+      { name: "Leaf Nibble", power: 16, type: "Grass", accuracy: 1, desc: "A gentle leafy bite.", effect: null },
+      { name: "Fern Whip", power: 22, type: "Grass", accuracy: 0.95, desc: "Whips with curling fronds.", effect: { id: "thorns", chance: 0.35, turns: 3 } },
+      { name: "Sprout Guard", power: 10, type: "Grass", accuracy: 1, desc: "Roots into a sturdy ward.", effect: { id: "ward", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -71,8 +74,9 @@ const CREATURES = [
     weight: 18,
     base: { hp: 36, atk: 42, def: 30, spd: 44 },
     moves: [
-      { name: "Pollen Zap", power: 20, type: "Electric" },
-      { name: "Static Flutter", power: 26, type: "Electric" },
+      { name: "Pollen Zap", power: 20, type: "Electric", accuracy: 0.95, desc: "Sparks through pollen dust.", effect: { id: "pollen", chance: 0.4, turns: 3 } },
+      { name: "Static Flutter", power: 26, type: "Electric", accuracy: 0.9, desc: "A buzzing wing dash.", effect: { id: "glow", chance: 0.3, turns: 3 } },
+      { name: "Glow Dust", power: 12, type: "Electric", accuracy: 1, desc: "Bright dust that sharpens focus.", effect: { id: "focus", chance: 0.8, turns: 3 } },
     ],
   },
   {
@@ -86,11 +90,11 @@ const CREATURES = [
     weight: 14,
     base: { hp: 48, atk: 40, def: 46, spd: 28 },
     moves: [
-      { name: "Pebble Toss", power: 18, type: "Rock" },
-      { name: "Rose Crush", power: 26, type: "Rock" },
+      { name: "Pebble Toss", power: 18, type: "Rock", accuracy: 0.95, desc: "Lobs a mossy pebble.", effect: null },
+      { name: "Rose Crush", power: 26, type: "Rock", accuracy: 0.9, desc: "Crushes with vine-wrapped stone.", effect: { id: "thorns", chance: 0.3, turns: 3 } },
+      { name: "Moss Armor", power: 8, type: "Rock", accuracy: 1, desc: "Hardens moss into a ward.", effect: { id: "ward", chance: 1, turns: 4 } },
     ],
   },
-  // --- Mist Grove (5 new) ---
   {
     id: "mistwing",
     name: "Mistwing",
@@ -102,8 +106,9 @@ const CREATURES = [
     weight: 20,
     base: { hp: 38, atk: 40, def: 32, spd: 46 },
     moves: [
-      { name: "Veil Touch", power: 18, type: "Ghost" },
-      { name: "Phantom Gust", power: 25, type: "Ghost" },
+      { name: "Veil Touch", power: 18, type: "Ghost", accuracy: 1, desc: "A chilling silk brush.", effect: null },
+      { name: "Phantom Gust", power: 25, type: "Ghost", accuracy: 0.95, desc: "A foggy gust that may sleep.", effect: { id: "sleep", chance: 0.3, turns: 2 } },
+      { name: "Mist Cloak", power: 10, type: "Ghost", accuracy: 1, desc: "Wraps itself in speed glow.", effect: { id: "glow", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -117,8 +122,9 @@ const CREATURES = [
     weight: 16,
     base: { hp: 40, atk: 44, def: 34, spd: 42 },
     moves: [
-      { name: "Bramble Scratch", power: 20, type: "Dark" },
-      { name: "Night Bloom", power: 26, type: "Dark" },
+      { name: "Bramble Scratch", power: 20, type: "Dark", accuracy: 1, desc: "Scratches with thorny pads.", effect: { id: "thorns", chance: 0.35, turns: 3 } },
+      { name: "Night Bloom", power: 26, type: "Dark", accuracy: 0.9, desc: "A shadowy rose burst.", effect: { id: "poison", chance: 0.25, turns: 3 } },
+      { name: "Harrow Focus", power: 12, type: "Dark", accuracy: 1, desc: "Narrows its glare for focus.", effect: { id: "focus", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -132,8 +138,9 @@ const CREATURES = [
     weight: 18,
     base: { hp: 42, atk: 38, def: 36, spd: 40 },
     moves: [
-      { name: "Frost Nuzzle", power: 18, type: "Ice" },
-      { name: "Crystal Flurry", power: 25, type: "Ice" },
+      { name: "Frost Nuzzle", power: 18, type: "Ice", accuracy: 1, desc: "A chilly nuzzle.", effect: null },
+      { name: "Crystal Flurry", power: 25, type: "Ice", accuracy: 0.9, desc: "A flurry that may freeze.", effect: { id: "freeze", chance: 0.25, turns: 2 } },
+      { name: "Sugar Coat", power: 10, type: "Ice", accuracy: 1, desc: "Ices over into a ward.", effect: { id: "ward", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -147,8 +154,9 @@ const CREATURES = [
     weight: 17,
     base: { hp: 40, atk: 46, def: 32, spd: 44 },
     moves: [
-      { name: "Ember Kiss", power: 20, type: "Fire" },
-      { name: "Roseflare", power: 27, type: "Fire" },
+      { name: "Ember Kiss", power: 20, type: "Fire", accuracy: 1, desc: "A warm spark kiss.", effect: { id: "burn", chance: 0.3, turns: 3 } },
+      { name: "Roseflare", power: 27, type: "Fire", accuracy: 0.9, desc: "Blooms into a flare.", effect: { id: "burn", chance: 0.2, turns: 3 } },
+      { name: "Kindle Focus", power: 12, type: "Fire", accuracy: 1, desc: "Fans embers into focus.", effect: { id: "focus", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -162,11 +170,11 @@ const CREATURES = [
     weight: 12,
     base: { hp: 44, atk: 42, def: 38, spd: 38 },
     moves: [
-      { name: "Mind Petal", power: 19, type: "Psychic" },
-      { name: "Prism Gaze", power: 28, type: "Psychic" },
+      { name: "Mind Petal", power: 19, type: "Psychic", accuracy: 1, desc: "A thought-petal strike.", effect: null },
+      { name: "Prism Gaze", power: 28, type: "Psychic", accuracy: 0.9, desc: "A gaze that may sleep.", effect: { id: "sleep", chance: 0.3, turns: 2 } },
+      { name: "Clarity", power: 10, type: "Psychic", accuracy: 1, desc: "Sharpens the mind.", effect: { id: "focus", chance: 1, turns: 3 } },
     ],
   },
-  // --- Tidebloom Shore (5 new) ---
   {
     id: "pearlotter",
     name: "Pearlotter",
@@ -178,8 +186,9 @@ const CREATURES = [
     weight: 22,
     base: { hp: 42, atk: 40, def: 34, spd: 44 },
     moves: [
-      { name: "Pearl Slap", power: 18, type: "Water" },
-      { name: "Tide Twirl", power: 25, type: "Water" },
+      { name: "Pearl Slap", power: 18, type: "Water", accuracy: 1, desc: "Slaps with a pearl.", effect: null },
+      { name: "Tide Twirl", power: 25, type: "Water", accuracy: 0.95, desc: "Twirl that soaks the foe.", effect: { id: "wet", chance: 0.45, turns: 3 } },
+      { name: "Surf Glow", power: 12, type: "Water", accuracy: 1, desc: "Rides a glowing current.", effect: { id: "glow", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -193,8 +202,9 @@ const CREATURES = [
     weight: 16,
     base: { hp: 46, atk: 44, def: 48, spd: 28 },
     moves: [
-      { name: "Shell Pinch", power: 20, type: "Rock" },
-      { name: "Reef Crush", power: 27, type: "Rock" },
+      { name: "Shell Pinch", power: 20, type: "Rock", accuracy: 1, desc: "A coral pincer pinch.", effect: null },
+      { name: "Reef Crush", power: 27, type: "Rock", accuracy: 0.9, desc: "Crushes with reef weight.", effect: { id: "thorns", chance: 0.3, turns: 3 } },
+      { name: "Coral Ward", power: 8, type: "Rock", accuracy: 1, desc: "Hardens into reef armor.", effect: { id: "ward", chance: 1, turns: 4 } },
     ],
   },
   {
@@ -208,8 +218,9 @@ const CREATURES = [
     weight: 20,
     base: { hp: 48, atk: 34, def: 40, spd: 32 },
     moves: [
-      { name: "Kelp Hug", power: 16, type: "Grass" },
-      { name: "Shore Lullaby", power: 24, type: "Grass" },
+      { name: "Kelp Hug", power: 16, type: "Grass", accuracy: 1, desc: "A wrapping kelp hug.", effect: { id: "thorns", chance: 0.3, turns: 3 } },
+      { name: "Shore Lullaby", power: 14, type: "Grass", accuracy: 0.95, desc: "A song that may sleep.", effect: { id: "sleep", chance: 0.4, turns: 2 } },
+      { name: "Sea Ward", power: 10, type: "Grass", accuracy: 1, desc: "Hums up a petal ward.", effect: { id: "ward", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -223,8 +234,9 @@ const CREATURES = [
     weight: 14,
     base: { hp: 40, atk: 42, def: 36, spd: 40 },
     moves: [
-      { name: "Drift Pulse", power: 19, type: "Psychic" },
-      { name: "Anemone Veil", power: 26, type: "Psychic" },
+      { name: "Drift Pulse", power: 19, type: "Psychic", accuracy: 1, desc: "A pulsing mindwave.", effect: null },
+      { name: "Anemone Veil", power: 22, type: "Psychic", accuracy: 0.95, desc: "A veil that may poison.", effect: { id: "poison", chance: 0.35, turns: 3 } },
+      { name: "Tide Focus", power: 12, type: "Psychic", accuracy: 1, desc: "Stillwater focus.", effect: { id: "focus", chance: 1, turns: 3 } },
     ],
   },
   {
@@ -238,8 +250,9 @@ const CREATURES = [
     weight: 11,
     base: { hp: 38, atk: 48, def: 32, spd: 46 },
     moves: [
-      { name: "Ink Ribbon", power: 20, type: "Dark" },
-      { name: "Night Current", power: 28, type: "Dark" },
+      { name: "Ink Ribbon", power: 20, type: "Dark", accuracy: 1, desc: "Lashes with inky ribbon.", effect: { id: "pollen", chance: 0.3, turns: 3 } },
+      { name: "Night Current", power: 28, type: "Dark", accuracy: 0.9, desc: "A dark undertow strike.", effect: { id: "sleep", chance: 0.2, turns: 2 } },
+      { name: "Pearl Focus", power: 12, type: "Dark", accuracy: 1, desc: "Gleams into sharp focus.", effect: { id: "focus", chance: 1, turns: 3 } },
     ],
   },
 ];
@@ -269,4 +282,12 @@ function typeMultiplier(moveType, targetType) {
   const row = TYPE_CHART[moveType];
   if (!row) return 1;
   return row[targetType] || 1;
+}
+
+function areaDisplayName(area) {
+  if (area === "grove") return "Mist Grove";
+  if (area === "shore") return "Tidebloom Shore";
+  if (area === "town") return "Petalvale";
+  if (area === "pen") return "Creature Pen";
+  return "Blossom Route";
 }

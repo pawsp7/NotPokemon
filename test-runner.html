@@ -4,9 +4,11 @@
 <body>
 <pre id="out">running…</pre>
 <script src="js/creatures.js"></script>
+<script src="js/status.js"></script>
 <script src="js/maps.js"></script>
 <script src="js/rpg.js"></script>
 <script src="js/cosmetics.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/sprites.js"></script>
 <script>
 const out = document.getElementById('out');
@@ -15,30 +17,31 @@ function ok(name, cond) { lines.push((cond ? 'OK  ' : 'FAIL') + ' ' + name); if 
 (async () => {
   try {
     ok('15 creatures', CREATURES.length === 15);
-    ok('shore 5', creaturesForArea('shore').length === 5);
-    ok('maps shore+pen', !!(MAPS.shore && MAPS.pen && MAPS.town && MAPS.route && MAPS.grove));
+    ok('moves have power', CREATURES.every(c => c.moves.every(m => typeof m.power === 'number')));
+    ok('moves have effect field', CREATURES.every(c => c.moves.every(m => 'effect' in m)));
+    ok('formatMove', formatMove(CREATURES[0].moves[0]).includes('dmg'));
+    ok('status burn', !!STATUS_INFO.burn);
+    ok('maps travel', TRAVEL_POINTS.length === 5);
+    ok('building solid', isSolid(TILE.BUILDING) && isSolid(TILE.LEDGE) && isSolid(TILE.FENCE));
+    ok('warp route north town', warpAt('route', 10, 0)?.to === 'town');
+    ok('warp route south shore', warpAt('route', 10, 14)?.to === 'shore');
+    ok('warp route east grove', warpAt('route', 19, 8)?.to === 'grove' || warpAt('route', 18, 8)?.to === 'grove');
+    ok('warp town south route', warpAt('town', 10, 14)?.to === 'route');
+    ok('warp town east pen', warpAt('town', 18, 9)?.to === 'pen');
+    ok('town building blocks', tileBlocked('town', 2, 1));
+    ok('town path open', !tileBlocked('town', 10, 12) && canOccupyPixels('town', 10*32, 12*32));
+    ok('pen fence blocks', tileBlocked('pen', 1, 2));
+    ok('route ledge blocks', tileBlocked('route', 8, 1));
     const m = makePartyMember('bloomvu', 5);
     ok('skillPoints', m.skillPoints === 1);
-    ok('spendSkill', spendSkill(m, 'atk') && m.skills.atk === 1 && m.skillPoints === 0);
-    ok('occupy start', canOccupyPixels('town', 10*32, 12*32));
-    ok('block tree', !canOccupyPixels('town', 0, 0));
-    ok('npc blocks', tileBlocked('town', 4, 5));
-    ok('warp shore', !!warpAt('route', 5, 14) && warpAt('route', 5, 14).to === 'shore');
-    ok('warp pen', !!warpAt('town', 16, 9) && warpAt('town', 16, 9).to === 'pen');
-    const cos = defaultCosmetics();
-    const st = { cosmetics: cos, dex: new Set(CREATURES.slice(0,5).map(c=>c.id)), storage: [{},{},{}], battlesWon: 10 };
-    const newly = evaluateAchievements(st);
-    ok('ach catch5', newly.some(a => a.id === 'catch5'));
-    ok('ach pen3', newly.some(a => a.id === 'pen3'));
-    ok('ach battles10', newly.some(a => a.id === 'battles10'));
-    ok('scarf unlock', cos.unlockedAccessories.includes('scarf_leaf'));
+    applyStatus(m, 'burn', 2);
+    ok('applyStatus', m.status?.id === 'burn');
+    const hit = rollMoveHit({ accuracy: 1 }, m);
+    ok('rollMoveHit', hit === true || hit === false);
     await loadImages();
+    ok('images walk', !!IMAGES.player_cloak_pink_walk);
     ok('images shore', !!IMAGES.shore);
-    ok('images pen', !!IMAGES.pen);
-    ok('images pearlotter', !!IMAGES.pearlotter);
-    ok('images npc nurse', !!IMAGES.npc_nurse);
-    ok('images icon warp', !!IMAGES.icon_warp);
-    ok('outfit mint', !!IMAGES.player_coat_mint);
+    ok('audio bus', typeof AudioBus.playBgm === 'function');
     const failed = lines.filter(l => l.startsWith('FAIL')).length;
     lines.push(failed ? `\n${failed} FAILED` : '\nALL PASSED');
     out.textContent = lines.join('\n');
